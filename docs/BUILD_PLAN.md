@@ -126,6 +126,13 @@ Each phase ends with something you can run and check. Don't start the next phase
 - Free-text *preferences* ("Mornings if possible," "tutoring!!") get the same suggestion, but they don't need confirming. A misread preference can't break a rule, and the review page shows how each one was read.
 
 **Done when:** each of the 11 fake answers gets a sensible suggestion. "Any weekday after 4" reads as phone bank only (tutoring starts at 3), and "Saturdays but not the 14th" keeps both Saturday shifts except Nov 14. An unconfirmed person is never available. Tests cover each pattern.
+**Result (2026-10-22):** done. All 11 fake answers get the expected suggestion. Details settled while building:
+- **Suggestions are conservative.** Anything uncertain ("maybe", "if", "every other week") is left out, with a note. For "every other week," the note offers both possible sets of dates ready to paste. Accepting a suggestion can never add availability the person didn't clearly give.
+- **Confirming is one action.** A non-blank `confirmed_reading` means confirmed. The tool writes the `status` column (`to review` / `confirmed` / `error: …`). A reading with a mistake, like a Friday date on a Thursday shift, keeps the person off the schedule and says why.
+- **Groups.** Readings can have groups separated by `;`, because "except"/"only" dates sometimes apply to just one shift (for example, Saturdays every week plus phone bank every other week).
+- **Matching survives Excel.** Rows are matched by email plus the answer's letters and digits, not by timestamp. Excel rewrites dates, and can change the file's encoding, when it saves a CSV. So "a new response stops the old confirmation" means a new response with a *different* answer. The same answer resubmitted keeps its confirmation.
+- **`check-input` maintains the review file.** It writes the file only when something changed, and skips writing (with a warning) if Excel has it open.
+- **Preferences** are read automatically and always limited to the person's confirmed availability.
 
 ### Phase 3: Core scheduler plus independent checker
 **Builds:** `python -m scheduler draft --week …`, which prints the schedule as plain text for now.
