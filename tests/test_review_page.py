@@ -191,10 +191,38 @@ def test_draft_command_writes_the_week_folder(folder):
 # --- fits on one printed page --------------------------------------------------------
 
 def printed_pages(html_path: Path, tmp_path: Path) -> int:
+    """Print with headless Chrome and count the PDF's pages.
+
+    Chrome gets a throwaway profile and no keychain, so it never waits on first-run setup or a
+    password prompt. With its own profile it may keep running after writing the PDF, so we wait
+    for the file to finish and then stop Chrome ourselves.
+    """
+    import time
     pdf = tmp_path / "page.pdf"
-    subprocess.run([str(CHROME), "--headless=new", "--disable-gpu", "--no-pdf-header-footer",
-                    f"--print-to-pdf={pdf}", html_path.resolve().as_uri()],
-                   capture_output=True, timeout=60)
+    chrome = subprocess.Popen(
+        [str(CHROME), "--headless=new", "--disable-gpu", "--no-pdf-header-footer",
+         f"--user-data-dir={tmp_path / 'chrome-profile'}", "--no-first-run", "--no-default-browser-check",
+         "--use-mock-keychain", "--password-store=basic", f"--print-to-pdf={pdf}", html_path.resolve().as_uri()],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        deadline, last_size = time.time() + 90, -1
+        while time.time() < deadline:
+            size = pdf.stat().st_size if pdf.exists() else 0
+            if size and size == last_size and pdf.read_bytes().rstrip().endswith(b"%%EOF"):
+                break
+            if chrome.poll() is not None and size:
+                break
+            last_size = size
+            time.sleep(0.5)
+        else:
+            pytest.fail("Chrome didn't produce a PDF within 90 seconds")
+    finally:
+        if chrome.poll() is None:
+            chrome.terminate()
+            try:
+                chrome.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                chrome.kill()
     return len(re.findall(rb"/Type\s*/Page[^s]", pdf.read_bytes()))
 
 

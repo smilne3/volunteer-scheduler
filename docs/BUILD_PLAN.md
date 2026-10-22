@@ -221,6 +221,13 @@ Each phase ends with something you can run and check. Don't start the next phase
 ### Phase 8: Polish for the coordinator
 **Builds:** a short `README.md` for the coordinator (weekly steps, how to confirm free-text readings, how to import) and a double-clickable `Draft next week.command` file so they don't need to type commands. It also handles iCloud quirks: if `signups.xlsx` isn't downloaded yet, it says so. Excel's `~$` lock files are ignored.
 **Done when:** someone who hasn't seen the code can do a full week from the README alone.
+**Result (2026-10-22):** built. The coordinator never types a command:
+- **`install-launchers`** writes **Volunteer Scheduler.command** (a numbered menu: check sign-ups, draft, re-check, approve, open the folder, open the guide), **Draft next week.command**, and **How to use the scheduler.html** into the data folder.
+- **The guide is the coordinator's "README."** It's plain language, built around the menu, with a troubleshooting list. The repo README stays the setup and maintenance guide. A test checks that the guide's numbered steps match the menu's labels.
+- **The menu handles the fiddly parts:** picking the week (Return for next week, or a date like `11/16`, moved back to its Monday), asking before replacing an existing draft, defaulting re-check and approve to the latest unapproved week, revealing `calendar.ics` in Finder after approval, and showing problems without quitting.
+- **Launchers** have the data folder, code folder and Python path filled in, safely quoted, so folder names with spaces or apostrophes work. If the code isn't where they expect, they say so instead of failing silently. They never overwrite files they didn't make.
+- **iCloud quirks** (not downloaded yet, open in Excel) already had plain-English messages from Phases 1–2. Excel's `~$` lock files are ignored. A test drafts with lock files present.
+- **"Someone who hasn't seen the code"** was approximated by a fresh setup that followed only the README (see the PR). A real first-time run by the coordinator is still the true test.
 
 ---
 

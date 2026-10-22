@@ -24,7 +24,8 @@ def build_parser() -> argparse.ArgumentParser:
             "Drafts a weekly volunteer shift calendar from signups.xlsx for a "
             "person to review. Never contacts anyone."
         ),
-        epilog="Weekly steps: check-input, draft, (edit and draft --recheck), approve. See README.md.",
+        epilog=("Weekly steps: check-input, draft, (edit and draft --recheck), approve. Or run 'menu' for a "
+                "numbered menu. See README.md."),
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     commands = parser.add_subparsers(dest="command", metavar="command")
@@ -76,6 +77,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     week_arg(approve, "approve")
     file_arg(approve)
+
+    commands.add_parser(
+        "menu",
+        help="A numbered menu for the weekly steps (what the double-click launcher opens)",
+        description="Show a numbered menu for checking sign-ups, drafting, re-checking, and approving. Uses the "
+                    "data folder ($VOLUNTEER_SCHEDULER_DATA or ~/volunteer-scheduler).",
+    )
+    commands.add_parser(
+        "install-launchers",
+        help="Put double-click launchers and the how-to guide in the data folder",
+        description='Write "Volunteer Scheduler.command", "Draft next week.command" and "How to use the '
+                    'scheduler.html" into the data folder, set up for this laptop. Safe to run again.',
+    )
     return parser
 
 
@@ -97,6 +111,18 @@ def main(argv=None) -> int:
                                   replace=args.replace, open_page=not args.no_open)
         if args.command == "approve":
             return commands.approve(args.file, args.week, today, now, ask=input)
+        if args.command == "menu":
+            from .menu import open_in_finder, run_menu
+            quiet = bool(os.environ.get("VOLUNTEER_SCHEDULER_NO_OPEN"))   # for tests: don't open windows
+            return run_menu(data_folder(), today, opener=(lambda *a, **k: None) if quiet else open_in_finder,
+                            open_pages=not quiet)
+        if args.command == "install-launchers":
+            from .launchers import install_launchers
+            code_dir = Path(__file__).resolve().parent.parent
+            for path in install_launchers(data_folder(), code_dir, Path(sys.executable)):
+                print(f"Wrote {path}")
+            print("Double-click \"Volunteer Scheduler.command\" in that folder to start.")
+            return 0
     except InputError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
