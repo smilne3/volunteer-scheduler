@@ -10,9 +10,13 @@ from .signups import SignupData
 from .solver import Draft, is_experienced
 
 
-def format_draft(data: SignupData, settings: Settings, draft: Draft, findings: List[Finding]) -> str:
+def format_draft(data: SignupData, settings: Settings, draft: Draft, findings: List[Finding],
+                 status: str = "draft", edited: bool = False) -> str:
     people = {v.email: v for v in data.volunteers}
-    out = [f"DRAFT, NOT APPROVED: week of Monday {draft.week_start.isoformat()}", ""]
+    label = {"draft": "DRAFT, NOT APPROVED", "approved": "APPROVED",
+             "changed since approval": "CHANGED SINCE APPROVAL, approve again"}[status]
+    out = [f"{label}: week of Monday {draft.week_start.isoformat()}"
+           + (" (from your edited assignments.csv)" if edited else ""), ""]
 
     for slot in draft.slots:
         team = [people[a.email] for a in draft.assignments
@@ -32,7 +36,7 @@ def format_draft(data: SignupData, settings: Settings, draft: Draft, findings: L
         out.extend(f"  - {f.message}" for f in broken)
     else:
         out.append("CHECK: no rules broken.")
-    gaps = explain_gaps(data, settings, draft)
+    gaps = explain_gaps(data, settings, draft, edited=edited)
     unmet = [f for f in findings if f.level == UNMET]
     if gaps or unmet:
         out.append(f"NEEDS ATTENTION ({max(len(gaps), len(unmet))}):")

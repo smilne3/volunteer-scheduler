@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+from datetime import date, datetime
 from pathlib import Path
 
 from . import __version__
@@ -18,13 +19,17 @@ def build_parser() -> argparse.ArgumentParser:
             "Drafts a weekly volunteer shift calendar from signups.xlsx for a "
             "person to review. Never contacts anyone."
         ),
-        epilog=(
-            "Commands still to come: approve (Phase 6). "
-            "See docs/BUILD_PLAN.md."
-        ),
+        epilog="Weekly steps: check-input, draft, (edit and draft --recheck), approve. See README.md.",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     commands = parser.add_subparsers(dest="command", metavar="command")
+
+    def file_arg(p):
+        p.add_argument("--file", type=Path, default=DEFAULT_SIGNUPS,
+                       help="sign-up spreadsheet to read (default: signups.xlsx in the project folder)")
+
+    def week_arg(p, verb):
+        p.add_argument("--week", help=f"Monday of the week to {verb}, like 2026-11-09 (default: next week)")
 
     check = commands.add_parser(
         "check-input",
@@ -35,23 +40,36 @@ def build_parser() -> argparse.ArgumentParser:
             "availability is confirmed."
         ),
     )
-    check.add_argument("--file", type=Path, default=DEFAULT_SIGNUPS,
-                       help="sign-up spreadsheet to read (default: signups.xlsx in the project folder)")
+    file_arg(check)
 
     draft = commands.add_parser(
         "draft",
-        help="Draft a week's schedule",
+        help="Draft a week's schedule, or re-check your edits to it",
         description=(
             "Draft a week's schedule, check it against every rule, and write weeks/<week>/review.html "
-            "(opened in your browser) and weeks/<week>/assignments.csv. Contacts no one."
+            "(opened in your browser) and weeks/<week>/assignments.csv. With --recheck, check your "
+            "edited assignments.csv instead and refresh the review page. Contacts no one."
         ),
     )
-    draft.add_argument("--week", help="Monday of the week to draft, like 2026-11-09 (default: next week)")
-    draft.add_argument("--no-open", action="store_true", help="don't open the review page in the browser")
+    week_arg(draft, "draft")
+    draft.add_argument("--recheck", action="store_true",
+                       help="check your edited assignments.csv instead of drafting a new schedule")
     draft.add_argument("--replace", action="store_true",
                        help="replace an existing assignments.csv for that week (the old one is kept as a copy)")
-    draft.add_argument("--file", type=Path, default=DEFAULT_SIGNUPS,
-                       help="sign-up spreadsheet to read (default: signups.xlsx in the project folder)")
+    draft.add_argument("--no-open", action="store_true", help="don't open the review page in the browser")
+    file_arg(draft)
+
+    approve = commands.add_parser(
+        "approve",
+        help="Approve a week and write its Google Calendar file",
+        description=(
+            "Check the week's assignments.csv against every rule. If nothing is broken, write "
+            "weeks/<week>/calendar.ics for importing into Google Calendar. Asks you to type yes if any "
+            "shift is short. Contacts no one."
+        ),
+    )
+    week_arg(approve, "approve")
+    file_arg(approve)
     return parser
 
 
@@ -61,47 +79,16 @@ def main(argv=None) -> int:
     if args.command is None:
         parser.print_help()
         return 0
+    from . import commands
+    today, now = date.today(), datetime.now()
     try:
         if args.command == "check-input":
-            from datetime import date
-
-            from .check_input import format_report
-            from .review_file import apply_reviews
-            from .signups import read_signups
-            data = read_signups(args.file)
-            review = apply_reviews(data, today=date.today())
-            print(format_report(data, review))
-        elif args.command == "draft":
-            from datetime import date, datetime
-
-            from .checker import BROKEN, check
-            from .draft_report import format_draft
-            from .reasons import explain_gaps
-            from .review_file import apply_reviews
-            from .review_page import render_assignments_csv, render_review_page, write_week_files
-            from .settings import load_settings
-            from .signups import read_signups
-            from .solver import schedule
-            from .week import parse_week
-            week = parse_week(args.week, date.today())
-            settings = load_settings(args.file.parent)
-            data = read_signups(args.file)
-            review = apply_reviews(data, today=date.today())
-            result = schedule(data, settings, week)
-            findings = check(data, settings, week, result.assignments)
-            now = datetime.now()
-            html = render_review_page(data, settings, result, findings, explain_gaps(data, settings, result),
-                                      review, generated=now)
-            folder = write_week_files(args.file.parent, result, html, render_assignments_csv(data, result),
-                                      replace=args.replace, now=now)
-            print(format_draft(data, settings, result, findings))
-            print(f"Review page: {folder / 'review.html'}")
-            print(f"Editable draft: {folder / 'assignments.csv'}")
-            if not args.no_open:
-                import webbrowser
-                webbrowser.open((folder / "review.html").resolve().as_uri())
-            if any(f.level == BROKEN for f in findings):
-                return 2
+            return commands.check_input(args.file, today)
+        if args.command == "draft":
+            return commands.draft(args.file, args.week, today, now, recheck=args.recheck,
+                                  replace=args.replace, open_page=not args.no_open)
+        if args.command == "approve":
+            return commands.approve(args.file, args.week, today, now, ask=input)
     except InputError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
