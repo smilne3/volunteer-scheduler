@@ -29,13 +29,14 @@ REAL_SHIFTS = [TUE, WED, THU, SAT_AM, SAT_PM]
 def make_person(name: str, reading: str, shifts, limit: int = 1, experienced: bool = False,
                 ready: bool = True) -> Volunteer:
     email = name.lower().replace(" ", ".") + "@example.com"
+    parsed = parse_reading(reading, shifts)
     v = Volunteer(
         row=0, timestamp=datetime(2026, 10, 1), name=name, email=email, phone="",
-        available=Answer(reading, CLEAN), preferred=Answer("", BLANK),
+        available=Answer(reading, CLEAN, parsed.shift_ids), preferred=Answer("", BLANK),
         max_per_week=limit, experienced=experienced,
     )
     if ready:
-        v.reading, v.reading_source = parse_reading(reading, shifts), "form"
+        v.reading, v.reading_source = parsed, "form"
     return v
 
 
@@ -45,3 +46,15 @@ def make_data(shifts, people: List[Volunteer]) -> SignupData:
 
 def settings(**kwargs) -> Settings:
     return Settings(**kwargs)
+
+
+def random_scenario(rng, shifts, n_people):
+    people = []
+    for i in range(n_people):
+        ids = [s.id for s in shifts if rng.random() < 0.4] or [rng.choice(shifts).id]
+        reading = ", ".join(ids)
+        if all(i.startswith("SAT") for i in ids) and rng.random() < 0.3:
+            reading += " except 2026-11-14"        # the Saturday in the test week
+        people.append(make_person(f"R{i}", reading, shifts, limit=rng.randint(1, 3),
+                                  experienced=rng.random() < 0.35))
+    return make_data(shifts, people)
