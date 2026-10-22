@@ -7,9 +7,12 @@ previous stage's best result:
 
   1. experienced cover   every shift that needs an experienced person gets one
   2. coverage            fill as many slots as possible
-  3. tie-break           fixed per-week order, so the same input gives the same draft
+  3. fair counts         spread shifts: a k-th shift for one person costs 2k-1, so
+                         nobody gets a 2nd shift while someone available has none
+  4. preferences         as many preferred shifts as possible
+  5. tie-break           fixed per-week order, so the same input gives the same draft
 
-Phase 4 adds fair counts and preferences between stages 2 and 3.
+Settings can swap 3 and 4 (fair_counts_before_preferences = false).
 """
 
 import hashlib
@@ -89,6 +92,7 @@ def schedule(data: SignupData, settings: Settings, week_start: date) -> Draft:
     # Rule 5 (closed dates): closed slots have no choices at all.
 
     experienced = {v.email for v in candidates if is_experienced(v, settings)}
+    prefs = {v.email: v.preferred_ids for v in candidates}
     covered = {}
     for n, s in enumerate(slots):
         if s.shift.needs_experienced:
@@ -110,7 +114,36 @@ def schedule(data: SignupData, settings: Settings, week_start: date) -> Draft:
     problem.setObjective(filled)
     _solve(problem)
     problem += filled >= round(pulp.value(filled))
-    # Stage 3: tie-break, so the result is the same every time for this week.
+
+    # Fair counts: load[p, k] = 1 if p gets at least k shifts. Costs rise with k
+    # (1, 3, 5, ...), i.e. the sum of squared shift counts.
+    load_cost = []
+    for v in candidates:
+        mine = chosen(email=v.email)
+        if not mine:
+            continue
+        levels = [problem.add_variable(f"load{len(load_cost)}_{k}", 0, 1, cat="Binary")
+                  for k in range(1, min(v.max_per_week, len(mine)) + 1)]
+        problem += pulp.lpSum(levels) == pulp.lpSum(mine)
+        load_cost.extend((2 * k - 1) * lv for k, lv in enumerate(levels, start=1))
+    unfairness = pulp.lpSum(load_cost)
+    preferred = pulp.lpSum(var for (e, i), var in x.items() if i in prefs.get(e, ()))
+
+    def stage_fairness():
+        problem.setObjective(-unfairness)
+        _solve(problem)
+        problem.addConstraint(unfairness <= round(pulp.value(unfairness) or 0))
+
+    def stage_preferences():
+        problem.setObjective(preferred)
+        _solve(problem)
+        problem.addConstraint(preferred >= round(pulp.value(preferred) or 0))
+
+    stages = [stage_fairness, stage_preferences]
+    for stage in stages if settings.fair_counts_before_preferences else reversed(stages):
+        stage()
+
+    # Stage 5: tie-break, so the result is the same every time for this week.
     problem.setObjective(pulp.lpSum(_tie_break(week_start, e, i) * var for (e, i), var in x.items()))
     _solve(problem)
 

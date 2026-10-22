@@ -65,6 +65,9 @@ class Volunteer:
     reading_source: str = ""                  # "form" or "confirmed"
     preferred_ids: FrozenSet[str] = frozenset()   # always within reading.shift_ids
     preferred_source: str = ""                # "form" or "suggested"
+    # For free-text answers: the tool's suggestion. Only used to explain gaps,
+    # never to schedule (that needs a confirmed reading).
+    suggested: Optional[Reading] = None
 
     @property
     def status(self) -> str:

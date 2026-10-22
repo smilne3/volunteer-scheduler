@@ -162,6 +162,11 @@ Each phase ends with something you can run and check. Don't start the next phase
 - Running twice gives the same draft.
 - Changing the week date changes the tie-break order.
 
+**Result (2026-10-22):** done. The fake week of Nov 9 now gives 13 different people one shift each, every one of them on a shift they preferred, with no rules broken. Details settled while building:
+- **"Fair" is measured as the sum of each person's shift count squared.** A k-th shift costs 2k−1, so moving a shift from someone with 2 to someone with 0 always scores better, and 2+2 beats 3+1. Tests check directly that no shift could be moved from a person with 2+ shifts to an available person with 0 without breaking a rule or losing experienced cover. That's checked on four fake weeks and 40 random scenarios.
+- **Preferences count preferred shifts given,** and they're always limited to confirmed availability. They never cost coverage or experienced cover, because those stages are locked in first.
+- **Gap reasons name each available person and why they weren't used** (weekly limit, overlap, back-to-back off). They also name people who came close: a date exception, an answer not yet confirmed whose *suggested* reading covers the shift, or a sign-up with a problem. A test confirms every unmet goal the checker finds gets a reason.
+
 ### Phase 5: The one-page review page
 **Builds:** `weeks/<week>/review.html`, which opens automatically, plus `assignments.csv`. The page has a large **DRAFT, NOT APPROVED** banner and is laid out to print on one page. Contents, top to bottom:
 1. **Problems first:** empty slots with reasons, missing experienced cover, unconfirmed free-text answers (and who was left out because of them), and duplicate sign-ups.
