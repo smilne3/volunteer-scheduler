@@ -244,3 +244,11 @@ These have defaults so building can start now. Each one is a single setting to c
 ## 7. Changes after the phases
 
 **2026-10-22: a shift can need more than one experienced volunteer.** The coordinator worries that people drop Saturday afternoons, so Sat PM should have a backup experienced person. The Shifts tab's "Needs at least one experienced volunteer?" column now takes Yes (1), No (0), or a number, which can't be more than "People needed". Goal 1 (experienced cover) now counts experienced people up to each shift's number, so it's still met before coverage and fairness. The checker and the gap reasons report "has 1 of the 2 experienced volunteers it needs". On the fake data, setting Sat PM to 2 gives Indy and Yael on Sat PM; everyone is still on a preferred shift and nothing is broken. **The real Google Sheet's Shifts tab must say 2 as well,** or the next downloaded `signups.xlsx` puts it back to Yes.
+
+**2026-10-22: every schedule ends with a note** saying it was drafted with AI from the sign-up form. Approved schedules add "and checked by staff"; drafts say "Not yet checked by staff."
+
+**2026-10-22: the scheduler can be shared across Macs.** The Phase 8 launchers had this Mac's paths written into them. iCloud synced them to the user's other Mac, where they couldn't work. That contradicted the goal of a process others can pick up. Now:
+- **The launchers contain no usernames or paths.** They use the folder they sit in as the data folder, and `~/code/volunteer-scheduler` plus `~/.venvs/volunteer-scheduler` on whichever Mac runs them.
+- **A new `Set up this Mac.command` in the shared folder** installs the scheduler from GitHub on any Mac, or updates it. It prompts for Apple's command line tools if they're missing, and refuses to install inside iCloud Drive (D13).
+- **Sharing works:** anyone the iCloud folder is shared with runs setup once. Reinstalling from any Mac writes identical files.
+- **Tested** on a simulated second Mac: not set up, then setup, then drafting a week from the shared folder. Also tested: the same files on this Mac, setup as an update, and the iCloud refusal. Not tested on a truly fresh Mac (the command line tools prompt).
