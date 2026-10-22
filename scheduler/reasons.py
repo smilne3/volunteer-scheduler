@@ -36,21 +36,27 @@ def _why_not(v: Volunteer, slot: Slot, draft: Draft, settings: Settings, by_id) 
 
 
 def _also_mentioned(slot: Slot, data: SignupData, wanted) -> List[str]:
-    """People who aren't available here but came close: date exceptions, unconfirmed, problems."""
-    out = []
+    """People who aren't available here but came close, grouped by reason."""
+    sid, d = slot.shift.id, slot.date
+    groups = {"date": [], "unconfirmed": [], "problem": [], "zero": []}
     for v in data.volunteers:
         if not wanted(v):
             continue
-        sid, d = slot.shift.id, slot.date
         if v.status == "ready" and sid in v.reading.shift_ids and not v.reading.allows(sid, d):
-            out.append(f"{v.name} can't do {_when(slot)}")
+            groups["date"].append(v.name)
         elif v.status == "needs reading" and v.suggested is not None and v.suggested.allows(sid, d):
-            out.append(f"{v.name}'s answer may include it but isn't confirmed yet")
+            groups["unconfirmed"].append(v.name)
         elif v.status == "problem" and sid in v.available.shift_ids:
-            out.append(f"{v.name}'s sign-up has a problem (see check-input)")
+            groups["problem"].append(v.name)
         elif v.status == "ready" and v.reading.allows(sid, d) and (v.max_per_week or 0) == 0:
-            out.append(f"{v.name} said 0 shifts a week")
-    return out
+            groups["zero"].append(v.name)
+    labels = {
+        "date": f"Can't do {_when(slot)}",
+        "unconfirmed": "Answers not confirmed yet that may include it",
+        "problem": "Sign-ups with a problem to fix first (see check-input)",
+        "zero": "Said 0 shifts a week",
+    }
+    return [f"{labels[k]}: {', '.join(names)}" for k, names in groups.items() if names]
 
 
 def _sentence(parts: List[str]) -> str:

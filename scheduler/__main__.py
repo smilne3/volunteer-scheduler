@@ -41,9 +41,15 @@ def build_parser() -> argparse.ArgumentParser:
     draft = commands.add_parser(
         "draft",
         help="Draft a week's schedule",
-        description="Draft a week's schedule and check it against every rule. Contacts no one.",
+        description=(
+            "Draft a week's schedule, check it against every rule, and write weeks/<week>/review.html "
+            "(opened in your browser) and weeks/<week>/assignments.csv. Contacts no one."
+        ),
     )
     draft.add_argument("--week", help="Monday of the week to draft, like 2026-11-09 (default: next week)")
+    draft.add_argument("--no-open", action="store_true", help="don't open the review page in the browser")
+    draft.add_argument("--replace", action="store_true",
+                       help="replace an existing assignments.csv for that week (the old one is kept as a copy)")
     draft.add_argument("--file", type=Path, default=DEFAULT_SIGNUPS,
                        help="sign-up spreadsheet to read (default: signups.xlsx in the project folder)")
     return parser
@@ -66,11 +72,13 @@ def main(argv=None) -> int:
             review = apply_reviews(data, today=date.today())
             print(format_report(data, review))
         elif args.command == "draft":
-            from datetime import date
+            from datetime import date, datetime
 
             from .checker import BROKEN, check
             from .draft_report import format_draft
+            from .reasons import explain_gaps
             from .review_file import apply_reviews
+            from .review_page import render_assignments_csv, render_review_page, write_week_files
             from .settings import load_settings
             from .signups import read_signups
             from .solver import schedule
@@ -78,10 +86,20 @@ def main(argv=None) -> int:
             week = parse_week(args.week, date.today())
             settings = load_settings(args.file.parent)
             data = read_signups(args.file)
-            apply_reviews(data, today=date.today())
+            review = apply_reviews(data, today=date.today())
             result = schedule(data, settings, week)
             findings = check(data, settings, week, result.assignments)
+            now = datetime.now()
+            html = render_review_page(data, settings, result, findings, explain_gaps(data, settings, result),
+                                      review, generated=now)
+            folder = write_week_files(args.file.parent, result, html, render_assignments_csv(data, result),
+                                      replace=args.replace, now=now)
             print(format_draft(data, settings, result, findings))
+            print(f"Review page: {folder / 'review.html'}")
+            print(f"Editable draft: {folder / 'assignments.csv'}")
+            if not args.no_open:
+                import webbrowser
+                webbrowser.open((folder / "review.html").resolve().as_uri())
             if any(f.level == BROKEN for f in findings):
                 return 2
     except InputError as e:
