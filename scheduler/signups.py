@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Dict, FrozenSet, List, Optional
 
 from .errors import InputError
+from .readings import Reading, plain
 from .shifts import Shift, read_shifts
 from .text import is_blank, norm
 from .workbook import find_columns, get_sheet, open_workbook
@@ -58,15 +59,23 @@ class Volunteer:
     experienced: bool
     problems: List[str] = field(default_factory=list)  # stop this person being scheduled
     notes: List[str] = field(default_factory=list)     # worth knowing, don't block
+    # The availability actually used. Set from clean form answers here, or from a
+    # confirmed reading in availability_review.csv. None = can't be scheduled.
+    reading: Optional[Reading] = None
+    reading_source: str = ""                  # "form" or "confirmed"
+    preferred_ids: FrozenSet[str] = frozenset()   # always within reading.shift_ids
+    preferred_source: str = ""                # "form" or "suggested"
 
     @property
     def status(self) -> str:
         if self.problems:
             return "problem"
-        if self.available.status == NEEDS_READING:
-            return "needs reading"
         if self.available.status == BLANK:
             return "no availability"
+        if self.reading is None:
+            return "needs reading"
+        if not self.reading.shift_ids:
+            return "no shifts"
         return "ready"
 
 
@@ -175,7 +184,11 @@ def read_signups(path: Path) -> SignupData:
             v.notes.append(f'"Volunteered before?" answer is "{cell("experienced") or ""}", so counted as not experienced.')
         if available.status == BLANK:
             v.notes.append("Didn't say which shifts they can do.")
+        if available.status == CLEAN:
+            v.reading, v.reading_source = plain(available.shift_ids), "form"
         if available.status == CLEAN and preferred.status == CLEAN:
+            v.preferred_ids = preferred.shift_ids & available.shift_ids
+            v.preferred_source = "form"
             extra = sorted(preferred.shift_ids - available.shift_ids)
             if extra:
                 v.notes.append(f"Prefers {', '.join(extra)} but didn't mark it as available, so that preference is ignored.")
