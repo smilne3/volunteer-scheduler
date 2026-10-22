@@ -2,7 +2,16 @@
 
 Drafts a weekly volunteer shift calendar from `signups.xlsx` for a person to review and approve. It never emails, texts or contacts anyone. Plan and decisions: [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md).
 
-**Status:** Phases 0–2 done. The tool reads `signups.xlsx`, suggests readings for free-text availability, and uses the ones the coordinator confirms. It doesn't schedule anything yet.
+**Status:** Phases 0–3 done. The tool reads `signups.xlsx`, uses confirmed free-text readings, and drafts a week that keeps every rule. Fair spreading and preferences come in Phase 4, and the review page and calendar file in Phases 5–6.
+
+## Draft a week
+
+```
+python -m scheduler draft                     # next week
+python -m scheduler draft --week 2026-11-09   # the week starting Monday Nov 9
+```
+
+This prints who's on each shift (★ = experienced), then a check of every rule: nobody outside their availability or over their weekly limit, no overlapping shifts, no shift overfilled, nothing on closed dates. It also lists any shift that's short or missing an experienced person. Nothing is saved or sent.
 
 ## Check the spreadsheet
 
