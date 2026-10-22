@@ -112,6 +112,10 @@ Each phase ends with something you can run and check. Don't start the next phase
 **Builds:** `python -m scheduler check-input`. It loads both sheets and turns each shift into a short ID made from its day and start time (`SAT-0900`, `SAT-1200`, `TUE-1500`, `WED-1700`, `THU-1500`). It reads clean checkbox answers into those IDs. Free-text answers are set aside and labeled "needs reading." It also handles duplicate sign-ups (same email: the newest response wins, and the older one is reported). It prints a table of what it understood for each person.
 **Clear errors for:** the file missing or not downloaded from iCloud yet, a renamed sheet or column, a shift name in an answer that's not in the Shifts sheet, and a missing or non-number weekly limit.
 **Done when:** the output on the fake data shows 19 clean readings and 11 "needs reading," and tests cover each error message.
+**Result (2026-10-22):** done. Two details settled while building:
+- **What stops the run vs. what doesn't.** File-level problems stop the run: missing file, missing sheet or column, or a bad Shifts sheet (every bad row is listed at once). A problem in one person's row, like a blank or non-number weekly limit or a missing email, only blocks that person and is listed under PROBLEMS.
+- **Shift names not in the Shifts sheet.** If 2 or more responses contain the same shift-like name (a day plus a time range) that isn't in the Shifts sheet, it must be a form option missing from the sheet, so the run stops. If only one person typed something shift-like, it's treated as free text and noted.
+- **Test data.** Tests use a committed copy of the fake data at `tests/fixtures/signups_fake.xlsx`, because the real `signups.xlsx` is gitignored.
 
 ### Phase 2: Free-text availability review
 **Builds:** suggested readings for free-text answers, and the `availability_review.csv` loop.
