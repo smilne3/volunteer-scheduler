@@ -30,8 +30,8 @@ _KNOWN = ("timezone", "closed_dates", "extra_experienced_emails", "fairness_look
 def load_settings(folder: Path) -> Settings:
     path = Path(folder) / FILE_NAME
     if not path.exists():
-        return Settings(notes=[f"No {FILE_NAME} found, so defaults were used. "
-                               f"Copy settings.example.json to {FILE_NAME} to change them."])
+        return Settings(notes=[f"No {FILE_NAME} found in {Path(folder)}, so defaults were used. To change them, "
+                               f"copy settings.example.json from the code folder there as {FILE_NAME}."])
     try:
         raw = json.loads(path.read_text(encoding="utf-8-sig"))
     except json.JSONDecodeError as e:

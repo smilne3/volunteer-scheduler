@@ -8,7 +8,9 @@ previous stage's best result:
   1. experienced cover   every shift that needs an experienced person gets one
   2. coverage            fill as many slots as possible
   3. fair counts         spread shifts: a k-th shift for one person costs 2k-1, so
-                         nobody gets a 2nd shift while someone available has none
+                         nobody gets a 2nd shift while someone available has none;
+                         then, from approved past weeks, shifts go to people with
+                         fewer recent shifts (fairness across weeks)
   4. preferences         as many preferred shifts as possible
   5. tie-break           fixed per-week order, so the same input gives the same draft
 
@@ -18,7 +20,7 @@ Settings can swap 3 and 4 (fair_counts_before_preferences = false).
 import hashlib
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import pulp
 
@@ -73,7 +75,9 @@ def draft_from(data: SignupData, settings: Settings, week_start: date, assignmen
     return Draft(week_start, slots, closed, ordered, candidates, left_out)
 
 
-def schedule(data: SignupData, settings: Settings, week_start: date) -> Draft:
+def schedule(data: SignupData, settings: Settings, week_start: date, recent: Optional[Dict[str, int]] = None) -> Draft:
+    """recent: email -> approved shifts in the lookback window (from history.load_history)."""
+    recent = recent or {}
     slots, closed = week_slots(data.shifts, week_start, settings.closed_dates)
     candidates, left_out = _people(data)
 
@@ -142,10 +146,16 @@ def schedule(data: SignupData, settings: Settings, week_start: date) -> Draft:
     unfairness = pulp.lpSum(load_cost)
     preferred = pulp.lpSum(var for (e, i), var in x.items() if i in prefs.get(e, ()))
 
+    already_had = pulp.lpSum(recent.get(e, 0) * var for (e, i), var in x.items())
+
     def stage_fairness():
         problem.setObjective(-unfairness)
         _solve(problem)
         problem.addConstraint(unfairness <= round(pulp.value(unfairness) or 0))
+        if any(recent.get(e, 0) for (e, _i) in x):
+            problem.setObjective(-already_had)        # across weeks: fewer recent shifts first
+            _solve(problem)
+            problem.addConstraint(already_had <= round(pulp.value(already_had) or 0))
 
     def stage_preferences():
         problem.setObjective(preferred)
