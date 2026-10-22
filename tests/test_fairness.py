@@ -176,7 +176,7 @@ def test_reason_date_exception():
     bailey = make_person("Bailey Sample", "SAT-0900 except 2026-11-14", REAL_SHIFTS)
     texts = gap_texts(make_data([SAT_AM], [bailey]))
     assert texts[0].startswith("SAT-0900 (Nov 14) is 3 short: nobody is available.")
-    assert "Bailey Sample can't do Nov 14." in texts[0]
+    assert "Can't do Nov 14: Bailey Sample." in texts[0]
 
 
 def test_reason_names_unconfirmed_answers_that_may_include_the_shift(fake):
@@ -184,7 +184,7 @@ def test_reason_names_unconfirmed_answers_that_may_include_the_shift(fake):
     data = copy.deepcopy(fake)
     data.shifts = [dataclasses.replace(s, needs=8) if s.id == "THU-1500" else s for s in data.shifts]
     text = next(t for t in gap_texts(data, week=date(2026, 11, 23)) if t.startswith("THU-1500"))
-    assert "Harper Demo's answer may include it but isn't confirmed yet" in text
+    assert "Answers not confirmed yet that may include it: Harper Demo, Morgan Pretend, Xan Exampleton." in text
     assert "Sam Prototype" not in text        # "Thursdays. Not Nov 26": excluded that date
 
 
@@ -192,7 +192,7 @@ def test_reason_names_sign_ups_with_problems():
     lim = make_person("Lim Itless", "TUE-1500", REAL_SHIFTS)
     lim.problems.append('Most shifts per week is "two", which isn\'t a whole number.')
     text = gap_texts(make_data([TUE], [lim]))[0]
-    assert "Lim Itless's sign-up has a problem (see check-input)" in text
+    assert "Sign-ups with a problem to fix first (see check-input): Lim Itless." in text
 
 
 def test_reason_no_experienced():

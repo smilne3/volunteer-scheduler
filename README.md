@@ -2,7 +2,7 @@
 
 Drafts a weekly volunteer shift calendar from `signups.xlsx` for a person to review and approve. It never emails, texts or contacts anyone. Plan and decisions: [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md).
 
-**Status:** Phases 0–4 done. The tool reads `signups.xlsx`, uses confirmed free-text readings, and drafts a week that keeps every rule, spreads shifts fairly, honors preferences, and explains any gap. The review page and calendar file come in Phases 5–6.
+**Status:** Phases 0–5 done. The tool reads `signups.xlsx`, uses confirmed free-text readings, drafts a week that keeps every rule, spreads shifts fairly, honors preferences, explains any gap, and produces a one-page review page. Approving the week and the calendar file come in Phase 6.
 
 ## Draft a week
 
@@ -11,7 +11,12 @@ python -m scheduler draft                     # next week
 python -m scheduler draft --week 2026-11-09   # the week starting Monday Nov 9
 ```
 
-This prints who's on each shift (★ = experienced, ♥ = a shift they preferred), then a check of every rule: nobody outside their availability or over their weekly limit, no overlapping shifts, no shift overfilled, nothing on closed dates. Nothing is saved or sent.
+This checks every rule (nobody outside their availability or over their weekly limit, no overlapping shifts, no shift overfilled, nothing on closed dates), then writes two files to `weeks/<Monday>/` and opens the first in your browser:
+
+- **`review.html`**: the one-page review page. It shows what needs your attention, the week (★ experienced, ♥ a shift they preferred, open spots in red), fairness, and a contact list for scheduled people only. It's marked DRAFT, NOT APPROVED, and prints on one sheet.
+- **`assignments.csv`**: the same draft as a spreadsheet you can edit, with one row per person per shift and a blank row for each open spot.
+
+Nothing is sent to anyone. Use `--no-open` to skip opening the browser. If you've edited a week's `assignments.csv`, drafting that week again won't overwrite it unless you add `--replace`, and even then the old file is kept as `assignments-before-<time>.csv`.
 
 **How it chooses**, in this order:
 1. Every shift that needs an experienced person gets one.
