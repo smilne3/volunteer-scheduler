@@ -122,6 +122,7 @@ def apply_reviews(data: SignupData, today: date, path: Optional[Path] = None) ->
             continue
         as_of = v.timestamp.date() if v.timestamp else today
         suggestion = suggest(v.available.raw, shifts, as_of=as_of, today=today)
+        v.suggested = suggestion.reading
         old = existing.pop(review_key(v.email, v.available.raw), None)
         confirmed_text = (old or {}).get("confirmed_reading", "")
         status = TO_REVIEW

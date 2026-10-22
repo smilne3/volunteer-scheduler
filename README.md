@@ -2,7 +2,7 @@
 
 Drafts a weekly volunteer shift calendar from `signups.xlsx` for a person to review and approve. It never emails, texts or contacts anyone. Plan and decisions: [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md).
 
-**Status:** Phases 0–3 done. The tool reads `signups.xlsx`, uses confirmed free-text readings, and drafts a week that keeps every rule. Fair spreading and preferences come in Phase 4, and the review page and calendar file in Phases 5–6.
+**Status:** Phases 0–4 done. The tool reads `signups.xlsx`, uses confirmed free-text readings, and drafts a week that keeps every rule, spreads shifts fairly, honors preferences, and explains any gap. The review page and calendar file come in Phases 5–6.
 
 ## Draft a week
 
@@ -11,7 +11,16 @@ python -m scheduler draft                     # next week
 python -m scheduler draft --week 2026-11-09   # the week starting Monday Nov 9
 ```
 
-This prints who's on each shift (★ = experienced), then a check of every rule: nobody outside their availability or over their weekly limit, no overlapping shifts, no shift overfilled, nothing on closed dates. It also lists any shift that's short or missing an experienced person. Nothing is saved or sent.
+This prints who's on each shift (★ = experienced, ♥ = a shift they preferred), then a check of every rule: nobody outside their availability or over their weekly limit, no overlapping shifts, no shift overfilled, nothing on closed dates. Nothing is saved or sent.
+
+**How it chooses**, in this order:
+1. Every shift that needs an experienced person gets one.
+2. As many slots as possible are filled.
+3. **Fair counts:** nobody gets a second shift while someone available has none.
+4. **Preferences:** people get shifts they marked as preferred whenever possible. Set `fair_counts_before_preferences` to `false` to swap steps 3 and 4.
+5. Remaining ties are broken in a fixed order that changes each week, so the same week always drafts the same way.
+
+If a shift is short or has no experienced person, the draft says why, for example: "THU-1500 (Nov 26) is 2 short: 6 people are available. Casey is at their weekly limit. Harper's answer may include it but isn't confirmed yet." The FAIRNESS lines list who has more than one shift and who was available but not scheduled.
 
 ## Check the spreadsheet
 
