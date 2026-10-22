@@ -81,6 +81,8 @@ python -m scheduler approve --week 2026-11-09
 volunteer-scheduler/               (in iCloud Drive)
   signups.xlsx                     input, read only
   settings.json                    timezone, closed dates, extra experienced people, rule order
+                                   (local only, not in git: it can name volunteers)
+  settings.example.json            defaults, committed
   availability_review.csv          coordinator's confirmed readings of free-text answers
   docs/BUILD_PLAN.md
   scheduler/                       the code
@@ -99,7 +101,8 @@ volunteer-scheduler/               (in iCloud Drive)
 Each phase ends with something you can run and check. Don't start the next phase until the current phase's "Done when" list passes.
 
 ### Phase 0: Setup
-**Builds:** the folder layout, venv at `~/.venvs/volunteer-scheduler`, installed `openpyxl`, `pulp` and `pytest`, an empty `scheduler/` package, a `settings.json` with defaults (timezone from the laptop, no closed dates), and `.gitignore`.
+**Builds:** the folder layout, venv at `~/.venvs/volunteer-scheduler`, installed `openpyxl`, `pulp` and `pytest`, an empty `scheduler/` package, a `settings.example.json` with defaults (timezone from the laptop, no closed dates) copied to a local `settings.json`, and `.gitignore`. It also adds the D5 guard test early: it fails if any code imports email, SMS or network modules.
+**Result (2026-10-22):** done. PuLP 3.3.1's bundled solver works on macOS 12.7.6 (Intel), so the OR-Tools fallback isn't needed.
 **Done when:**
 - `python -m scheduler --help` runs.
 - A 5-line PuLP test problem solves on this Mac. If PuLP's bundled solver won't run on macOS 12, switch to OR-Tools now, before anything depends on it.
