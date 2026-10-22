@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from builders import REAL_SHIFTS, SAT_AM, SAT_PM, TUE, WED, WEEK, make_data, make_person, make_shift, settings
+from builders import (REAL_SHIFTS, SAT_AM, SAT_PM, TUE, WED, WEEK, make_data, make_person, make_shift,
+                      random_scenario, settings)
 from scheduler.checker import BROKEN, check
 from scheduler.review_file import apply_reviews
 from scheduler.signups import read_signups
@@ -210,18 +211,6 @@ def test_checker_reports_unmet_goals():
 
 
 # --- random scenarios: solver output always passes the checker -----------------
-
-def random_scenario(rng, shifts, n_people):
-    people = []
-    for i in range(n_people):
-        ids = [s.id for s in shifts if rng.random() < 0.4] or [rng.choice(shifts).id]
-        reading = ", ".join(ids)
-        if all(i.startswith("SAT") for i in ids) and rng.random() < 0.3:
-            reading += " except 2026-11-14"        # the Saturday in the test week
-        people.append(make_person(f"R{i}", reading, shifts, limit=rng.randint(1, 3),
-                                  experienced=rng.random() < 0.35))
-    return make_data(shifts, people)
-
 
 @pytest.mark.parametrize("seed", range(40))
 def test_random_scenarios_never_break_rules(seed):
