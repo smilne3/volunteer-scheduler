@@ -2,7 +2,9 @@
 
 Drafts a weekly volunteer shift calendar from `signups.xlsx` for a person to review and approve. It never emails, texts or contacts anyone. Plan and decisions: [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md).
 
-**Status:** Phases 0–7 done. The full weekly routine works (check the sign-ups, draft, review, edit, approve, import into Google Calendar), and shifts rotate fairly from week to week. Still to come: a double-click launcher for the coordinator (Phase 8).
+**Status:** all phases (0–8) done. The full weekly routine works (check the sign-ups, draft, review, edit, approve, import into Google Calendar), shifts rotate fairly from week to week, and the coordinator can do all of it by double-clicking.
+
+**For the coordinator:** double-click **Volunteer Scheduler.command** in the data folder and follow the numbered menu. The plain-language guide **How to use the scheduler.html** is in the same folder. Everything below is for whoever sets up or maintains the tool.
 
 **Two folders:**
 - **Code:** this repo, at `~/code/volunteer-scheduler`. It's not synced; GitHub is its backup.
@@ -10,9 +12,9 @@ Drafts a weekly volunteer shift calendar from `signups.xlsx` for a person to rev
 
 The tool reads data from `~/volunteer-scheduler` unless you set `VOLUNTEER_SCHEDULER_DATA` to another folder, or pass `--file`. Keep the code out of iCloud: iCloud and git don't mix safely.
 
-## Each week
+## Each week (command-line version)
 
-Run these in the code folder after activating the environment (see [Setup](#setup-once-per-laptop)). Files mentioned below, like `weeks/…`, are in the data folder `~/volunteer-scheduler`.
+The menu does all of this for you: `python -m scheduler menu`, or double-click **Volunteer Scheduler.command**. If you'd rather type commands, run these in the code folder after activating the environment (see [Setup](#setup-once-per-laptop)). Files mentioned below, like `weeks/…`, are in the data folder `~/volunteer-scheduler`.
 
 **1. Check the sign-ups.**
 ```
@@ -100,7 +102,15 @@ source ~/.venvs/volunteer-scheduler/bin/activate
 pip install -r ~/code/volunteer-scheduler/requirements.txt
 mkdir -p ~/volunteer-scheduler                      # the data folder (can be a link into iCloud Drive)
 cp ~/code/volunteer-scheduler/settings.example.json ~/volunteer-scheduler/settings.json   # then edit it
+cd ~/code/volunteer-scheduler && python -m scheduler install-launchers
 ```
+
+`install-launchers` writes three files into the data folder, set up for this laptop:
+- **Volunteer Scheduler.command:** double-click for the menu.
+- **Draft next week.command:** double-click to draft next week in one step.
+- **How to use the scheduler.html:** the coordinator's guide.
+
+Run it again if the code or the environment moves. It never overwrites files it didn't make. The first time you double-click a `.command` file, macOS may ask you to confirm: right-click it, choose **Open**, then **Open** again.
 
 Each session:
 

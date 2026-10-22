@@ -1,0 +1,121 @@
+<!doctype html>
+<!-- volunteer-scheduler guide -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to use the scheduler</title>
+<style>
+:root { --ink:#1d1d1f; --muted:#5f6368; --line:#dcdce1; --bg:#ffffff; --panel:#f4f4f7; --accent:#1e5bb8; --note-bg:#fff4dc; --note:#7a4f00; }
+@media (prefers-color-scheme: dark) {
+  :root { --ink:#ececf1; --muted:#a3a3ad; --line:#3a3a42; --bg:#16161a; --panel:#202026; --accent:#8ab4ff; --note-bg:#352b14; --note:#ffcc66; }
+}
+* { box-sizing: border-box; }
+body { margin: 0 auto; max-width: 760px; padding: 28px 16px 48px; background: var(--bg); color: var(--ink);
+       font: 15px/1.55 -apple-system, "Helvetica Neue", Arial, sans-serif; }
+h1 { font-size: 26px; margin: 0 0 6px; }
+h2 { font-size: 19px; margin: 30px 0 8px; padding-top: 14px; border-top: 1px solid var(--line); }
+h3 { font-size: 16px; margin: 22px 0 6px; }
+.lead { color: var(--muted); margin-top: 0; }
+ol.steps { padding-left: 0; list-style: none; counter-reset: step; }
+ol.steps > li { counter-increment: step; position: relative; padding: 12px 14px 12px 52px; margin-bottom: 10px;
+                background: var(--panel); border-radius: 10px; }
+ol.steps > li::before { content: counter(step); position: absolute; left: 14px; top: 12px; width: 26px; height: 26px;
+                        border-radius: 50%; background: var(--accent); color: var(--bg); font-weight: 700;
+                        text-align: center; line-height: 26px; font-size: 14px; }
+ol.steps > li > b:first-child { display: block; margin-bottom: 2px; }
+code, kbd { font: 13px ui-monospace, Menlo, monospace; background: var(--panel); border: 1px solid var(--line);
+            border-radius: 4px; padding: 1px 5px; }
+ol.steps code { background: var(--bg); }
+.note { background: var(--note-bg); color: var(--note); border-radius: 8px; padding: 10px 12px; margin: 10px 0; }
+table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+th, td { text-align: left; vertical-align: top; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+th { font-size: 13px; color: var(--muted); font-weight: 600; }
+dt { font-weight: 650; margin-top: 12px; }
+dd { margin: 2px 0 0 0; }
+a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<h1>How to use the volunteer scheduler</h1>
+<p class="lead">The scheduler drafts each week's shift calendar from the sign-up spreadsheet. You check it, change anything you like, and approve it. It never emails or texts anyone: telling volunteers is up to you.</p>
+
+<h2>What's in this folder</h2>
+<table>
+<tr><th>File</th><th>What it's for</th></tr>
+<tr><td><b>Volunteer Scheduler.command</b></td><td>Double-click to start. Opens a menu with everything below.</td></tr>
+<tr><td><b>Draft next week.command</b></td><td>A shortcut: double-click to draft next week straight away.</td></tr>
+<tr><td><b>signups.xlsx</b></td><td>The latest sign-up spreadsheet. You replace it each week.</td></tr>
+<tr><td><b>availability_review.csv</b></td><td>Where you confirm availability that people typed instead of ticking boxes.</td></tr>
+<tr><td><b>weeks</b> folder</td><td>One folder per week, holding <b>review.html</b> (the one-page check), <b>assignments.csv</b> (who's on each shift, editable) and, once approved, <b>calendar.ics</b> (for Google Calendar).</td></tr>
+<tr><td><b>settings.json</b></td><td>Closed dates and a few other settings. Ask before changing it.</td></tr>
+</table>
+
+<h2>Each week</h2>
+<ol class="steps">
+<li><b>Update the sign-ups.</b>
+In Google Sheets, open the sign-up responses and choose <b>File → Download → Microsoft Excel (.xlsx)</b>. It lands in your Downloads folder under the sheet's name. Move it into this folder and rename it <code>signups.xlsx</code>, replacing the old one. The spreadsheet needs both tabs: <b>Form Responses 1</b> and <b>Shifts</b>.</li>
+
+<li><b>Double-click "Volunteer Scheduler.command".</b>
+A Terminal window opens with a numbered menu. Type a number and press <kbd>Return</kbd>. When you're finished, type <kbd>q</kbd>.</li>
+
+<li><b>Choose 1, Check the sign-ups.</b>
+If it lists anyone under <b>NEEDS READING</b>, they typed their availability, and they won't be scheduled until you confirm what it means:
+<ul>
+<li>Open <code>availability_review.csv</code> (choose <b>5</b> to open this folder).</li>
+<li>For each row, read the answer and the notes, then copy the <b>suggested_reading</b> into <b>confirmed_reading</b>, or write your own (see <a href="#readings">how to write a reading</a>). Leave it blank if you're not sure: that person just won't be scheduled yet.</li>
+<li>Save it as CSV. In Numbers, use <b>File → Export To → CSV</b>. In Excel, use <b>File → Save</b> and keep the CSV format.</li>
+<li>Choose <b>1</b> again. Each row's <b>status</b> shows <i>confirmed</i>, or explains what to fix.</li>
+</ul></li>
+
+<li><b>Choose 2, Draft a week.</b>
+Press <kbd>Return</kbd> for next week, or type a date like <kbd>11/16</kbd>. The review page opens in your browser. Read <b>Needs your attention</b> first: any short shift is in red, with the reason.</li>
+
+<li><b>Change anything you want to (optional).</b>
+Open <code>weeks/&lt;the week&gt;/assignments.csv</code>. Each row is one person on one shift. You can swap someone (change the name and email), remove a row, or fill a blank row (blank rows are open spots). A name on its own is fine if it matches one volunteer. Save it as CSV, then choose <b>3, Re-check a week</b>. The review page refreshes and tells you if anything breaks a rule, for example someone who isn't available that day.</li>
+
+<li><b>Choose 4, Approve a week.</b>
+If a rule is broken, it won't approve and tells you why. If a shift is short, type <kbd>yes</kbd> to approve anyway. Finder opens with <code>calendar.ics</code> selected, and the review page's banner turns green.</li>
+
+<li><b>Add it to Google Calendar.</b>
+On a computer (the phone app can't import), open Google Calendar, click the gear, then <b>Settings → Import &amp; export → Import</b>. Select <code>calendar.ics</code>, choose the volunteer-shifts calendar (not your personal one), and click <b>Import</b>. Nobody gets an invitation.</li>
+
+<li><b>Tell the volunteers yourself.</b>
+The review page has a contact list with the phone and email of everyone scheduled. Nothing has been sent to anyone.</li>
+</ol>
+
+<div class="note"><b>Changed your mind after approving?</b> Edit that week's <code>assignments.csv</code>, choose <b>3</b>, then <b>4</b>. If you'd already imported the week into Google Calendar, delete that week's shift events there first, then import the new <code>calendar.ics</code>, so nothing is doubled.</div>
+
+<h2 id="readings">How to write a reading</h2>
+<p>Shift IDs are the day plus start time, for example <code>SAT-0900</code> for Saturday 9 am. Option 1 lists them at the top.</p>
+<table>
+<tr><th>Reading</th><th>Means</th></tr>
+<tr><td><code>SAT-0900, SAT-1200</code></td><td>Both Saturday shifts, every week</td></tr>
+<tr><td><code>SAT-0900, SAT-1200 except 2026-11-14</code></td><td>Every Saturday except Nov 14</td></tr>
+<tr><td><code>WED-1700 only 2026-11-11, 2026-11-25</code></td><td>Phone bank on those two dates only</td></tr>
+<tr><td><code>SAT-0900; WED-1700 only 2026-11-11</code></td><td>Saturday mornings every week, plus phone bank on Nov 11 only</td></tr>
+<tr><td><code>none</code></td><td>No shifts</td></tr>
+</table>
+<p>The suggestions leave out anything uncertain, like "maybe Saturdays" or "every other week", and the notes say why. For "every other week", the notes offer both possible sets of dates, ready to copy.</p>
+
+<h2>If something goes wrong</h2>
+<dl>
+<dt>"…isn't downloaded to this Mac yet"</dt>
+<dd>In Finder, right-click the file and choose <b>Download Now</b>, then try again.</dd>
+<dt>"…looks open in Excel"</dt>
+<dd>Close the file in Excel or Numbers, then try again.</dd>
+<dt>"There's already a draft for that week"</dt>
+<dd>Press <kbd>Return</kbd> to keep it (choose <b>3</b> to check your edits), or type <kbd>yes</kbd> for a fresh draft. The old one is kept as a copy in the week's folder.</dd>
+<dt>"…is already approved"</dt>
+<dd>Edit that week's <code>assignments.csv</code>, choose <b>3</b>, then <b>4</b> to approve it again.</dd>
+<dt>"…missing these column headings" or "no sheet named…"</dt>
+<dd>A tab or question in the spreadsheet was renamed. The message lists what it expected. Rename it back and download again.</dd>
+<dt>macOS says the .command file can't be opened</dt>
+<dd>Right-click it, choose <b>Open</b>, then <b>Open</b> again. You only need to do this once.</dd>
+<dt>The window says "Can't find the scheduler's code"</dt>
+<dd>This laptop doesn't have the scheduler installed where the launcher expects. Ask the person who set it up.</dd>
+</dl>
+
+</body>
+</html>
