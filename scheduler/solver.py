@@ -5,7 +5,7 @@ Hard rules are constraints, and availability is enforced by construction: a
 Goals are met in strict order by solving in stages, each stage locking in the
 previous stage's best result:
 
-  1. experienced cover   every shift that needs an experienced person gets one
+  1. experienced cover   every shift gets the experienced people it needs (usually 1)
   2. coverage            fill as many slots as possible
   3. fair counts         spread shifts: a k-th shift for one person costs 2k-1, so
                          nobody gets a 2nd shift while someone available has none;
@@ -110,10 +110,10 @@ def schedule(data: SignupData, settings: Settings, week_start: date, recent: Opt
 
     experienced = {v.email for v in candidates if is_experienced(v, settings)}
     prefs = {v.email: v.preferred_ids for v in candidates}
-    covered = {}
+    covered = {}      # shift id -> experienced people counted toward its need (capped at the need)
     for n, s in enumerate(slots):
-        if s.shift.needs_experienced:
-            covered[s.shift.id] = problem.add_variable(f"cover{n}", 0, 1, cat="Binary")
+        if s.shift.experienced_needed:
+            covered[s.shift.id] = problem.add_variable(f"cover{n}", 0, s.shift.experienced_needed, cat="Integer")
             problem += covered[s.shift.id] <= pulp.lpSum(
                 var for (e, i), var in x.items() if i == s.shift.id and e in experienced)
 
