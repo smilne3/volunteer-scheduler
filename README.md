@@ -57,7 +57,7 @@ If you already imported a week and then changed it, delete that week's shift eve
 ## How it chooses
 
 In this order:
-1. Every shift that needs an experienced person gets one.
+1. Every shift gets the experienced people it needs. In the Shifts tab's experienced column, Yes means 1, No means 0, and a number like `2` asks for that many, for example a backup on a shift people often drop.
 2. As many slots as possible are filled.
 3. **Fair counts:** nobody gets a second shift while someone available has none. After that, shifts go to people with fewer shifts in the last 4 approved weeks (`fairness_lookback_weeks`), so people take turns from week to week. The review page shows when each waiting person last had a shift.
 4. **Preferences:** people get shifts they marked as preferred whenever possible. Set `fair_counts_before_preferences` to `false` to swap steps 3 and 4.
