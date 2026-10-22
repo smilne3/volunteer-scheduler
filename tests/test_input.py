@@ -253,7 +253,7 @@ def test_shifts_sheet_lists_every_bad_row_at_once(tmp_path):
     msg = error_text(shifts_sheet_copy(tmp_path, rows))
     assert 'Row 2 (Saturday Food Pantry 9am–12pm): Time "morning" isn\'t readable' in msg
     assert 'Row 3' in msg and 'People needed "three"' in msg
-    assert 'Row 4' in msg and '"Maybe"; use Yes or No' in msg
+    assert 'Row 4' in msg and '"Maybe"; use Yes, No, or how many experienced people it needs, like 2.' in msg
     assert 'Row 5' in msg and 'Day "Wendsday"' in msg
     assert "Row 6: missing Time" in msg
 
@@ -312,3 +312,23 @@ def test_workbook_built_from_scratch_without_optional_phone_column(tmp_path):
     solo = data.volunteers[0]
     assert solo.status == "ready" and solo.phone == ""
     assert solo.available.shift_ids == {"TUE-1500"}
+
+
+@pytest.mark.parametrize("value, expected", [("Yes", 1), ("no", 0), (2, 2), ("2", 2), (2.0, 2), (0, 0)])
+def test_experienced_column_takes_yes_no_or_a_number(tmp_path, value, expected):
+    rows = [list(r) for r in GOOD_ROWS]
+    rows[1][4] = value                      # Saturday Food Pantry 12pm–3pm
+    shifts = {s.id: s for s in read_signups(shifts_sheet_copy(tmp_path, rows)).shifts}
+    assert shifts["SAT-1200"].experienced_needed == expected
+    assert shifts["SAT-1200"].needs_experienced == (expected > 0)
+
+
+@pytest.mark.parametrize("value, message", [
+    (4, "it needs 4 experienced volunteers but only 3 people in total"),
+    ("two", 'is "two"; use Yes, No, or how many experienced people it needs, like 2.'),
+    (1.5, 'is "1.5"; use Yes, No, or how many'),
+])
+def test_experienced_number_must_make_sense(tmp_path, value, message):
+    rows = [list(r) for r in GOOD_ROWS]
+    rows[1][4] = value
+    assert message in error_text(shifts_sheet_copy(tmp_path, rows))

@@ -13,6 +13,7 @@ from builders import (REAL_SHIFTS, SAT_AM, SAT_PM, TUE, WED, WEEK, make_data, ma
 from scheduler.checker import BROKEN, check
 from scheduler.review_file import apply_reviews
 from scheduler.signups import read_signups
+from scheduler.shifts import Shift
 from scheduler.solver import Assignment, schedule
 
 FIXTURE = Path(__file__).parent / "fixtures" / "signups_fake.xlsx"
@@ -229,8 +230,12 @@ def score(data, s, assignments):
     findings = check(data, s, WEEK, assignments)
     if broken(findings):
         return None
-    covered = sum(1 for sh in data.shifts if sh.needs_experienced) - \
-        sum(1 for f in findings if f.code == "no_experienced")
+    team = {}
+    for a in assignments:
+        team.setdefault(a.shift_id, []).append(a.email)
+    people = {v.email: v for v in data.volunteers}
+    covered = sum(min(sh.experienced_needed, sum(people[e].experienced for e in team.get(sh.id, [])))
+                  for sh in data.shifts)
     return covered, len(assignments)
 
 
@@ -251,3 +256,45 @@ def test_solver_matches_brute_force_on_tiny_cases(seed):
     )
     draft = schedule(data, s, WEEK)
     assert score(data, s, draft.assignments) == best
+
+
+# --- a shift that needs more than one experienced person ------------------------------
+
+def two_experienced_scenario():
+    am = make_shift("SAT-0900", "Saturday", 9, 12, 2, experienced=True)
+    pm = make_shift("SAT-1200", "Saturday", 12, 15, 3)
+    pm = Shift(**{**pm.__dict__, "experienced_needed": 2})
+    shifts = [am, pm]
+    people = [
+        make_person("Vet One", "SAT-0900, SAT-1200", shifts, experienced=True),
+        make_person("Vet Two", "SAT-0900, SAT-1200", shifts, experienced=True),
+        make_person("Vet Three", "SAT-0900, SAT-1200", shifts, experienced=True),
+        make_person("New One", "SAT-0900, SAT-1200", shifts),
+        make_person("New Two", "SAT-1200", shifts),
+        make_person("New Three", "SAT-1200", shifts),
+    ]
+    return make_data(shifts, people)
+
+
+def test_shift_gets_the_number_of_experienced_people_it_needs():
+    data = two_experienced_scenario()
+    for week in (WEEK, date(2026, 11, 16), date(2026, 11, 23)):
+        draft = schedule(data, settings(), week)
+        pm_team = [a.email for a in draft.assignments if a.shift_id == "SAT-1200"]
+        assert sum(e.startswith("vet") for e in pm_team) >= 2
+        assert check(data, settings(), week, draft.assignments) == []
+
+
+def test_checker_and_reasons_flag_too_few_experienced():
+    from scheduler.reasons import explain_gaps
+    data = two_experienced_scenario()
+    sat = date(2026, 11, 14)
+    hand = [Assignment(sat, "SAT-0900", "vet.one@example.com"), Assignment(sat, "SAT-0900", "vet.two@example.com"),
+            Assignment(sat, "SAT-1200", "vet.three@example.com"), Assignment(sat, "SAT-1200", "new.two@example.com"),
+            Assignment(sat, "SAT-1200", "new.three@example.com")]
+    findings = check(data, settings(), WEEK, hand)
+    assert [f.message for f in findings] == ["SAT-1200 (Sat Nov 14) has 1 of the 2 experienced volunteers it needs."]
+    from scheduler.solver import draft_from
+    gaps = explain_gaps(data, settings(), draft_from(data, settings(), WEEK, hand), edited=True)
+    assert gaps[0].kind == "few_experienced"
+    assert gaps[0].text.startswith("SAT-1200 (Nov 14) has 1 of the 2 experienced volunteers it needs")

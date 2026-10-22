@@ -92,6 +92,10 @@ def check(data: SignupData, settings: Settings, week_start: date, assignments: I
             broken("overfilled", f"{s.id} ({_when(d)}) has {len(team)} people but needs {s.needs}.")
         elif len(team) < s.needs:
             unmet("unfilled", f"{s.id} ({_when(d)}) has {len(team)} of {s.needs} people.")
-        if s.needs_experienced and not any(experienced(v) for v in team):
+        have = sum(1 for v in team if experienced(v))
+        if s.needs_experienced and have == 0:
             unmet("no_experienced", f"{s.id} ({_when(d)}) has no experienced volunteer.")
+        elif have < s.experienced_needed:
+            unmet("few_experienced", f"{s.id} ({_when(d)}) has {have} of the {s.experienced_needed} "
+                                     f"experienced volunteers it needs.")
     return findings

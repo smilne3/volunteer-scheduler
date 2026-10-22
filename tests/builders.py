@@ -15,7 +15,7 @@ WEEK = date(2026, 11, 9)   # a Monday
 def make_shift(shift_id: str, day: str, start: int, end: int, needs: int, experienced: bool = False,
                name: str = "") -> Shift:
     return Shift(id=shift_id, name=name or f"{day} shift {shift_id}", day=day, start=time(start), end=time(end),
-                 needs=needs, needs_experienced=experienced, row=0)
+                 needs=needs, experienced_needed=int(experienced), row=0)
 
 
 # The five real shifts, built directly so tests don't depend on the spreadsheet.
