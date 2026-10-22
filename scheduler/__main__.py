@@ -29,7 +29,11 @@ def build_parser() -> argparse.ArgumentParser:
     check = commands.add_parser(
         "check-input",
         help="Show what the tool understood from signups.xlsx",
-        description="Read signups.xlsx and show what the tool understood for each volunteer. Changes nothing.",
+        description=(
+            "Read signups.xlsx and show what the tool understood for each volunteer. Never changes "
+            "signups.xlsx. Creates or updates availability_review.csv next to it, where free-text "
+            "availability is confirmed."
+        ),
     )
     check.add_argument("--file", type=Path, default=DEFAULT_SIGNUPS,
                        help="sign-up spreadsheet to read (default: signups.xlsx in the project folder)")
@@ -44,9 +48,14 @@ def main(argv=None) -> int:
         return 0
     try:
         if args.command == "check-input":
+            from datetime import date
+
             from .check_input import format_report
+            from .review_file import apply_reviews
             from .signups import read_signups
-            print(format_report(read_signups(args.file)))
+            data = read_signups(args.file)
+            review = apply_reviews(data, today=date.today())
+            print(format_report(data, review))
     except InputError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
