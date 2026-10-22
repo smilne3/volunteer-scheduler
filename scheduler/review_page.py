@@ -35,6 +35,27 @@ def time_range(start: time, end: time) -> str:
     return f"{_clock(start)} {s_ampm}–{_clock(end)} {e_ampm}"
 
 
+def waited(history, email: str, week) -> str:
+    """' (last shift 2 weeks ago)' for the fairness lines; '' when there's no history yet."""
+    if not history or not history.last_shift:
+        return ""
+    n = history.weeks_waiting(email, week)
+    if n is None:
+        return " (no approved shifts yet)"
+    return " (last shift last week)" if n == 1 else f" (last shift {n} weeks ago)"
+
+
+def history_line(history) -> str:
+    if not history or not history.lookback_weeks:
+        return "Fairness across weeks is off (fairness_lookback_weeks is 0)."
+    if not history.weeks_counted:
+        return (f"No approved weeks in the last {history.lookback_weeks} weeks yet, so shifts are spread "
+                f"within this week only.")
+    weeks = ", ".join(f"{d:%b} {d.day}" for d in history.weeks_counted)
+    return (f"After spreading this week's shifts evenly, people with fewer shifts in approved weeks "
+            f"({weeks}) were given shifts first.")
+
+
 def _day(d) -> str:
     return f"{d:%a %b} {d.day}"
 
@@ -96,7 +117,8 @@ footer { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 6px; 
 
 def render_review_page(data: SignupData, settings: Settings, draft: Draft, findings: List[Finding],
                        gaps: List[Gap], review: Optional[ReviewResult], generated: datetime,
-                       approval: Approval = Approval(DRAFT), edited: bool = False) -> str:
+                       approval: Approval = Approval(DRAFT), edited: bool = False,
+                       history=None, promoted: Optional[List[str]] = None) -> str:
     e = escape
     week = draft.week_start.isoformat()
     if approval.status == APPROVED:
@@ -136,7 +158,7 @@ def render_review_page(data: SignupData, settings: Settings, draft: Draft, findi
         v = people.get(r.email)
         items.append(("warn", f"<b>More than one response:</b> {e(v.name if v else r.email)}. The newest one "
                               f"(row {r.new_row}) was used."))
-    for n in settings.notes:
+    for n in list(settings.notes) + (list(history.skipped) if history else []):
         items.append(("warn", e(n)))
     if not items:
         items.append(("ok", "Nothing needs your attention. Every shift is staffed and no rules are broken."))
@@ -170,9 +192,14 @@ def render_review_page(data: SignupData, settings: Settings, draft: Draft, findi
     multi = sorted((people[em].name, n) for em, n in counts.items() if n > 1)
     fair.append("<p class=\"line\">More than one shift: "
                 + (", ".join(f"{e(name)} ({n})" for name, n in multi) if multi else "nobody") + ".</p>")
-    waiting = [v.name for v in draft.candidates if v.email not in counts]
+    waiting = [v for v in draft.candidates if v.email not in counts]
     fair.append(f"<p class=\"line\">Available but not scheduled ({len(waiting)}): "
-                + (", ".join(e(n) for n in waiting) if waiting else "nobody") + ".</p>")
+                + (", ".join(e(v.name) + e(waited(history, v.email, draft.week_start)) for v in waiting)
+                   if waiting else "nobody") + ".</p>")
+    fair.append(f"<p class=\"line\">{e(history_line(history))}</p>")
+    if promoted:
+        fair.append("<p class=\"line\">Counted as experienced because they've worked an approved shift: "
+                    + ", ".join(e(n) for n in promoted) + ".</p>")
     with_prefs = [people[em] for em in counts if people[em].preferred_ids]
     got = [v for v in with_prefs
            if any(a.shift_id in v.preferred_ids for a in draft.assignments if a.email == v.email)]

@@ -13,6 +13,7 @@ from .check_input import format_report
 from .checker import BROKEN, UNMET, Finding, check
 from .draft_report import format_draft
 from .errors import InputError
+from .history import History, apply_experience_from_history, load_history
 from .reasons import explain_gaps
 from .review_file import ReviewResult, apply_reviews
 from .review_page import WEEKS_DIR, render_assignments_csv, render_review_page, write_week_files
@@ -36,6 +37,8 @@ class Loaded:
     settings: Settings
     data: SignupData
     review: ReviewResult
+    history: History
+    promoted: List[str]            # counted as experienced because of approved shifts
 
 
 def _load(signups: Path, week_text, today: date) -> Loaded:
@@ -43,7 +46,9 @@ def _load(signups: Path, week_text, today: date) -> Loaded:
     settings = load_settings(signups.parent)
     data = read_signups(signups)
     review = apply_reviews(data, today=today)
-    return Loaded(week, signups.parent / WEEKS_DIR / week.isoformat(), settings, data, review)
+    history = load_history(signups.parent, data, week, settings.fairness_lookback_weeks, today)
+    promoted = apply_experience_from_history(data, history) if settings.count_approved_shifts_as_experience else []
+    return Loaded(week, signups.parent / WEEKS_DIR / week.isoformat(), settings, data, review, history, promoted)
 
 
 def _from_file(ld: Loaded):
@@ -58,7 +63,8 @@ def _from_file(ld: Loaded):
 def _page(ld: Loaded, draft: Draft, findings: List[Finding], now: datetime, edited: bool) -> str:
     return render_review_page(ld.data, ld.settings, draft, findings,
                               explain_gaps(ld.data, ld.settings, draft, edited=edited), ld.review,
-                              generated=now, approval=approval_status(ld.week_dir), edited=edited)
+                              generated=now, approval=approval_status(ld.week_dir), edited=edited,
+                              history=ld.history, promoted=ld.promoted)
 
 
 def check_input(signups: Path, today: date) -> int:
@@ -76,12 +82,13 @@ def draft(signups: Path, week_text, today: date, now: datetime, recheck: bool, r
         (ld.week_dir / "review.html").write_text(_page(ld, result, findings, now, edited=True), encoding="utf-8")
         folder = ld.week_dir
     else:
-        result = schedule(ld.data, ld.settings, ld.week)
+        result = schedule(ld.data, ld.settings, ld.week, recent=ld.history.recent)
         findings = check(ld.data, ld.settings, ld.week, result.assignments)
         folder = write_week_files(signups.parent, result, _page(ld, result, findings, now, edited=False),
                                   render_assignments_csv(ld.data, result), replace=replace, now=now)
     status = approval_status(folder).status
-    print(format_draft(ld.data, ld.settings, result, findings, status=status, edited=recheck))
+    print(format_draft(ld.data, ld.settings, result, findings, status=status, edited=recheck,
+                       history=ld.history, promoted=ld.promoted))
     print(f"Review page: {folder / 'review.html'}")
     print(f"Editable draft: {folder / 'assignments.csv'}")
     if open_page:
