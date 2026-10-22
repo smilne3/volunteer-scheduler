@@ -20,6 +20,7 @@ The tool drafts each week's volunteer shift calendar from `signups.xlsx`. A pers
 | D10 | **The scheduler is a small optimization model** (Python + PuLP, which bundles a free solver). A separate checker re-verifies every rule on the result. | A simple "pick the first available person" approach can paint itself into a corner, for example by using the only experienced person on a shift that didn't need one. The checker means a solver bug can't slip past. |
 | D11 | **Same input, same draft.** Ties are broken in a fixed order, so running it twice gives the same calendar. | Makes review and debugging predictable. |
 | D12 | **Python 3.9** (already on this Mac, macOS 12). The virtual environment lives **outside iCloud** at `~/.venvs/volunteer-scheduler`. | Putting a venv in iCloud syncs thousands of small files and can break it. |
+| D13 | **Code and data live in separate folders.** The code (this git repo) is at `~/code/volunteer-scheduler`, not synced, with GitHub as its backup. The data (`signups.xlsx`, settings, review files, weekly calendars, screenshots) is in the iCloud folder `~/volunteer-scheduler`. The tool reads data from there by default, or from `$VOLUNTEER_SCHEDULER_DATA`. | Added 2026-10-22. With the repo inside iCloud, iCloud silently put back older copies of five code files right after git updated them. It was caught and repaired, but iCloud and git can't safely share a folder. |
 
 ### Out of scope
 - Sending any message, invite or reminder (D5)
@@ -78,15 +79,16 @@ python -m scheduler approve --week 2026-11-09
 ### Folder layout
 
 ```
-volunteer-scheduler/               (in iCloud Drive)
+~/code/volunteer-scheduler/        the code (git repo, not synced; GitHub is the backup)
+  docs/BUILD_PLAN.md
+  scheduler/
+  tests/
+  settings.example.json            defaults
+
+~/volunteer-scheduler/             the data (iCloud Drive; never in git, see D13)
   signups.xlsx                     input, read only
   settings.json                    timezone, closed dates, extra experienced people, rule order
-                                   (local only, not in git: it can name volunteers)
-  settings.example.json            defaults, committed
   availability_review.csv          coordinator's confirmed readings of free-text answers
-  docs/BUILD_PLAN.md
-  scheduler/                       the code
-  tests/
   weeks/2026-11-09/
     review.html                    one-page check
     assignments.csv                the draft; editable
@@ -196,7 +198,7 @@ Each phase ends with something you can run and check. Don't start the next phase
 - A test confirms the file has no `ATTENDEE`, `ORGANIZER` or `mailto:`.
 - A test scans the code and fails if it finds `smtplib`, `requests`, `urllib`, `socket` or any SMS library.
 
-**Result (2026-10-22):** done, except for one check that needs a person: importing the `.ics` into a real **test** Google Calendar. Instead, an independent iCalendar library (`icalendar` 6.3.2, used only for this one-off check and not added to the project) parsed the file with no errors, and all five events had the right local times. Details settled while building:
+**Result (2026-10-22):** done. The fake week's `.ics` was imported into a throwaway Google Calendar and looked right (checked by the user). Before that, an independent iCalendar library (`icalendar` 6.3.2, used only for this one-off check and not added to the project) parsed the file with no errors, and all five events had the right local times. Details settled while building:
 - **Reading edits is forgiving but strict where it matters.** A name without an email is matched if it fits exactly one volunteer. Excel-style dates (`11/10/26`), a shift name instead of its ID, and Windows-encoded saves are all accepted. Anything that can't be read is treated as a broken rule, so approval is refused.
 - **The typed "yes" comes from the keyboard.** There's no `--yes` flag, so it can't become a habit. If there's no answer (e.g. run from a script), the week isn't approved.
 - **The `APPROVED` marker is written last,** after `calendar.ics`, so an interrupted approval never looks complete. It stores the time, a SHA-256 fingerprint of `assignments.csv`, and how many times the week has been approved.
@@ -209,6 +211,12 @@ Each phase ends with something you can run and check. Don't start the next phase
 ### Phase 7: Fairness across weeks
 **Builds:** history read from approved weeks only, and goal 3 extended to prefer people with fewer shifts in the last 4 weeks (the number of weeks is a setting). The review page shows "weeks since last shift." Optionally, people who've completed an approved shift count as experienced from then on (off by default).
 **Done when:** a 4-week test run on the fake data shows unscheduled people moving up each week, and nobody available goes 3 or more weeks without a shift while others get one every week.
+**Result (2026-10-22):** done. In a 4-week run on the fake data (draft and approve each week), all 6 people who waited in week 1 got a shift in week 2. Over the four weeks everyone worked 2 or 3 times, and nobody waited two weeks in a row. Details settled while building:
+- **History comes only from approved weeks whose fingerprint still matches.** A week edited after approval is left out, and the review page says so, until it's approved again. Unapproved drafts, weeks after the one being drafted, and weeks older than the lookback window don't count.
+- **The within-week rule still comes first.** History is a separate solver step after it: among drafts that are equally fair within the week, it minimizes the total of "recent approved shifts" of the people scheduled. So someone with many recent shifts still never gets a 2nd shift this week while an available person has none. It also can't cost experienced cover or coverage, which are settled before it.
+- **"Weeks since last shift"** is shown next to everyone who's available but not scheduled, on the review page and in the terminal.
+- **`count_approved_shifts_as_experience`** (off by default) counts an approved shift as experience only once its date has passed. The review page lists who was counted this way.
+- **Folder move (D13).** During this phase, iCloud silently reverted code files after a git update, so the code moved out of iCloud. The data folder stays in iCloud.
 
 ### Phase 8: Polish for the coordinator
 **Builds:** a short `README.md` for the coordinator (weekly steps, how to confirm free-text readings, how to import) and a double-clickable `Draft next week.command` file so they don't need to type commands. It also handles iCloud quirks: if `signups.xlsx` isn't downloaded yet, it says so. Excel's `~$` lock files are ignored.

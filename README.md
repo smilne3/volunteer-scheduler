@@ -2,11 +2,17 @@
 
 Drafts a weekly volunteer shift calendar from `signups.xlsx` for a person to review and approve. It never emails, texts or contacts anyone. Plan and decisions: [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md).
 
-**Status:** Phases 0–6 done. The full weekly routine works: check the sign-ups, draft, review, edit, approve, and import into Google Calendar. Still to come: fairness across weeks (Phase 7) and a double-click launcher for the coordinator (Phase 8).
+**Status:** Phases 0–7 done. The full weekly routine works (check the sign-ups, draft, review, edit, approve, import into Google Calendar), and shifts rotate fairly from week to week. Still to come: a double-click launcher for the coordinator (Phase 8).
+
+**Two folders:**
+- **Code:** this repo, at `~/code/volunteer-scheduler`. It's not synced; GitHub is its backup.
+- **Data:** `signups.xlsx`, `settings.json`, `availability_review.csv`, the `weeks/` folders and your screenshots. These live in the iCloud folder `~/volunteer-scheduler`.
+
+The tool reads data from `~/volunteer-scheduler` unless you set `VOLUNTEER_SCHEDULER_DATA` to another folder, or pass `--file`. Keep the code out of iCloud: iCloud and git don't mix safely.
 
 ## Each week
 
-Run these in the project folder after activating the environment (see [Setup](#setup-once-per-laptop)).
+Run these in the code folder after activating the environment (see [Setup](#setup-once-per-laptop)). Files mentioned below, like `weeks/…`, are in the data folder `~/volunteer-scheduler`.
 
 **1. Check the sign-ups.**
 ```
@@ -51,7 +57,7 @@ If you already imported a week and then changed it, delete that week's shift eve
 In this order:
 1. Every shift that needs an experienced person gets one.
 2. As many slots as possible are filled.
-3. **Fair counts:** nobody gets a second shift while someone available has none.
+3. **Fair counts:** nobody gets a second shift while someone available has none. After that, shifts go to people with fewer shifts in the last 4 approved weeks (`fairness_lookback_weeks`), so people take turns from week to week. The review page shows when each waiting person last had a shift.
 4. **Preferences:** people get shifts they marked as preferred whenever possible. Set `fair_counts_before_preferences` to `false` to swap steps 3 and 4.
 5. Remaining ties are broken in a fixed order that changes each week, so the same week always drafts the same way.
 
@@ -85,19 +91,21 @@ Free-text **preferences** ("Mornings if possible") are read automatically and ne
 
 ## Setup (once per laptop)
 
-Requires Python 3.9 or newer. The virtual environment lives outside the project folder, because the folder syncs to iCloud.
+Requires Python 3.9 or newer. Keep both the code and the virtual environment outside iCloud.
 
 ```
+git clone https://github.com/smilne3/volunteer-scheduler.git ~/code/volunteer-scheduler
 python3 -m venv ~/.venvs/volunteer-scheduler
 source ~/.venvs/volunteer-scheduler/bin/activate
-pip install -r requirements.txt
-cp settings.example.json settings.json   # then edit settings.json
+pip install -r ~/code/volunteer-scheduler/requirements.txt
+mkdir -p ~/volunteer-scheduler                      # the data folder (can be a link into iCloud Drive)
+cp ~/code/volunteer-scheduler/settings.example.json ~/volunteer-scheduler/settings.json   # then edit it
 ```
 
 Each session:
 
 ```
-cd ~/volunteer-scheduler
+cd ~/code/volunteer-scheduler
 source ~/.venvs/volunteer-scheduler/bin/activate
 ```
 
@@ -114,9 +122,9 @@ Run the tests with `pytest`. One test prints the review page to PDF with Google 
 | `extra_experienced_emails` | `[]` | People to count as experienced even if their form says No |
 | `fair_counts_before_preferences` | `true` | Spread shift counts fairly before honoring preferences |
 | `allow_back_to_back_shifts` | `true` | Whether one person can work both Saturday shifts |
-| `fairness_lookback_weeks` | `4` | How many past approved weeks count toward fairness (Phase 7) |
-| `count_approved_shifts_as_experience` | `false` | Whether finishing an approved shift makes someone experienced (Phase 7) |
+| `fairness_lookback_weeks` | `4` | How many past approved weeks count toward fairness. `0` turns it off. |
+| `count_approved_shifts_as_experience` | `false` | Whether working an approved shift (once its date has passed) makes someone count as experienced |
 
 ## Private data stays out of git
 
-`signups.xlsx`, `settings.json`, `availability_review.csv` and the `weeks/` folder hold volunteers' details and are in `.gitignore`. This repo is public, so never force-add them.
+`signups.xlsx`, `settings.json`, `availability_review.csv` and the `weeks/` folder hold volunteers' details. They live in the data folder, not this repo, and `.gitignore` blocks them too in case one is copied in by mistake. This repo is public, so never force-add them. Tests use only the made-up data in `tests/fixtures`.

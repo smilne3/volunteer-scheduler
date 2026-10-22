@@ -11,7 +11,8 @@ from .solver import Draft, is_experienced
 
 
 def format_draft(data: SignupData, settings: Settings, draft: Draft, findings: List[Finding],
-                 status: str = "draft", edited: bool = False) -> str:
+                 status: str = "draft", edited: bool = False, history=None, promoted=None) -> str:
+    from .review_page import history_line, waited
     people = {v.email: v for v in data.volunteers}
     label = {"draft": "DRAFT, NOT APPROVED", "approved": "APPROVED",
              "changed since approval": "CHANGED SINCE APPROVAL, approve again"}[status]
@@ -50,9 +51,15 @@ def format_draft(data: SignupData, settings: Settings, draft: Draft, findings: L
     multi = [(people[e].name, n) for e, n in counts.items() if n > 1]
     if multi:
         out.append("  More than one shift: " + ", ".join(f"{name} ({n})" for name, n in sorted(multi)))
-    waiting = [v.name for v in draft.candidates if v.email not in counts]
+    waiting = [v for v in draft.candidates if v.email not in counts]
     if waiting:
-        out.append(f"  Available but not scheduled ({len(waiting)}): " + ", ".join(waiting))
+        out.append(f"  Available but not scheduled ({len(waiting)}): "
+                   + ", ".join(v.name + waited(history, v.email, draft.week_start) for v in waiting))
+    out.append("  " + history_line(history))
+    if promoted:
+        out.append("  Counted as experienced because they've worked an approved shift: " + ", ".join(promoted))
+    for note in (history.skipped if history else []):
+        out.append(f"  {note}")
 
     with_prefs = [people[e] for e in counts if people[e].preferred_ids]
     got = [v for v in with_prefs
