@@ -163,6 +163,8 @@ What to do about a red item:
 
 **4. Contact list.** Phone and email for everyone on this week's schedule, so you can tell them. Nobody else's details are shown.
 
+**The last line** says how the schedule was made. Until you approve it, it reads "Drafted with AI from the sign-up form. Not yet checked by staff." Once approved, it reads "Drafted with AI from the sign-up form and checked by staff."
+
 ### 6. Make changes (optional)
 
 To swap someone, add someone or take someone off:
@@ -196,7 +198,7 @@ Do this on a computer. The Google Calendar phone app can't import files.
 4. Under **Add to calendar**, pick the **volunteer-shifts calendar**, not your personal one.
 5. Click **Import**.
 
-Each shift becomes one event, such as "Food Pantry (AM): Alex, Indy, Uma", with full names in the description. Nobody gets an invitation.
+Each shift becomes one event, such as "Food Pantry (AM): Alex, Indy, Uma", with full names in the description. The description ends with "Drafted with AI from the sign-up form and checked by staff." Nobody gets an invitation.
 
 ### 9. Tell the volunteers
 

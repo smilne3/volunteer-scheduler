@@ -334,3 +334,43 @@ def test_approve_command_line(folder):
     assert result.returncode == 0, result.stderr
     marker = json.loads((week_dir(folder) / "APPROVED").read_text())
     assert marker["slots_filled"] == 13 and marker["sequence"] == 1
+
+
+# --- the AI note at the bottom of every schedule -------------------------------------
+
+DRAFT_NOTE = "Drafted with AI from the sign-up form. Not yet checked by staff."
+APPROVED_NOTE = "Drafted with AI from the sign-up form and checked by staff."
+
+
+def schedule_last_line(out: str) -> str:
+    """The terminal's schedule ends just before the 'Review page:' file location."""
+    lines = [l for l in out.splitlines() if l.strip()]
+    return lines[lines.index(next(l for l in lines if l.startswith("Review page:"))) - 1]
+
+
+def last_visible_line(html: str) -> str:
+    body = html[html.index("<body>"):html.index("</body>")]
+    return re.sub(r"<[^>]+>", "", body).strip().splitlines()[-1].strip()
+
+
+def test_ai_note_says_not_checked_on_a_draft_and_checked_once_approved(folder, capsys):
+    do_draft(folder)
+    page = week_dir(folder) / "review.html"
+    assert last_visible_line(page.read_text()) == DRAFT_NOTE
+    assert schedule_last_line(capsys.readouterr().out) == DRAFT_NOTE
+
+    do_approve(folder)
+    assert last_visible_line(page.read_text()) == APPROVED_NOTE
+
+    capsys.readouterr()
+    do_draft(folder, recheck=True)
+    assert schedule_last_line(capsys.readouterr().out) == APPROVED_NOTE
+
+    edit_csv(folder, drop_rows_with("lee.fictional"))                # changed after approval
+    do_draft(folder, recheck=True)
+    assert last_visible_line(page.read_text()) == DRAFT_NOTE
+
+
+def test_every_calendar_event_ends_with_the_ai_note(fake_data):
+    evs = events(ics_for(fake_data))
+    assert evs and all(ev["DESCRIPTION"].endswith("\\n" + APPROVED_NOTE) for ev in evs)
