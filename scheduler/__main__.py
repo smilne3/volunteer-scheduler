@@ -1,6 +1,7 @@
 """Command-line entry point: `python -m scheduler`."""
 
 import argparse
+import os
 import sys
 from datetime import date, datetime
 from pathlib import Path
@@ -8,8 +9,12 @@ from pathlib import Path
 from . import __version__
 from .errors import InputError
 
-PROJECT = Path(__file__).resolve().parent.parent
-DEFAULT_SIGNUPS = PROJECT / "signups.xlsx"
+DATA_ENV = "VOLUNTEER_SCHEDULER_DATA"
+
+
+def data_folder() -> Path:
+    """Where signups.xlsx, settings.json and weeks/ live. The code lives elsewhere (not in iCloud)."""
+    return Path(os.environ.get(DATA_ENV) or Path.home() / "volunteer-scheduler").expanduser()
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -25,8 +30,9 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", metavar="command")
 
     def file_arg(p):
-        p.add_argument("--file", type=Path, default=DEFAULT_SIGNUPS,
-                       help="sign-up spreadsheet to read (default: signups.xlsx in the project folder)")
+        p.add_argument("--file", type=Path, default=None,
+                       help=f"sign-up spreadsheet to read (default: signups.xlsx in ${DATA_ENV}, "
+                            f"or in ~/volunteer-scheduler if that isn't set)")
 
     def week_arg(p, verb):
         p.add_argument("--week", help=f"Monday of the week to {verb}, like 2026-11-09 (default: next week)")
@@ -81,6 +87,8 @@ def main(argv=None) -> int:
         return 0
     from . import commands
     today, now = date.today(), datetime.now()
+    if getattr(args, "file", None) is None:
+        args.file = data_folder() / "signups.xlsx"
     try:
         if args.command == "check-input":
             return commands.check_input(args.file, today)
