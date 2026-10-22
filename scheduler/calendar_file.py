@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Dict, List
 from zoneinfo import ZoneInfo
 
+from .disclosure import ai_note
 from .settings import Settings
 from .shifts import Shift
 from .signups import SignupData
@@ -89,7 +90,8 @@ def render_ics(data: SignupData, settings: Settings, draft: Draft, approved_at: 
         if open_n > 0:
             desc.append(f"Open spots: {open_n}")
         desc.append(f"Approved {approved_at:%b} {approved_at.day}, {approved_at:%Y}. "
-                    f"Made by volunteer-scheduler. Nobody was invited or notified.")
+                    f"Nobody was invited or notified.")
+        desc.append(ai_note(approved=True))
 
         start = datetime.combine(slot.date, sh.start, tzinfo=tz)
         end = datetime.combine(slot.date, sh.end, tzinfo=tz)
