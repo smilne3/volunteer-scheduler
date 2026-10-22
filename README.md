@@ -4,7 +4,7 @@ Drafts a weekly volunteer shift calendar from `signups.xlsx` for a person to rev
 
 **Status:** all phases (0–8) done. The full weekly routine works (check the sign-ups, draft, review, edit, approve, import into Google Calendar), shifts rotate fairly from week to week, and the coordinator can do all of it by double-clicking.
 
-**For the coordinator:** double-click **Volunteer Scheduler.command** in the data folder and follow the numbered menu. The plain-language guide **How to use the scheduler.html** is in the same folder. Everything below is for whoever sets up or maintains the tool.
+**For the coordinator:** read the **[Runbook](docs/RUNBOOK.md)**. It covers the weekly review, what to do when the sign-up form changes, and fixing common problems, with no code involved. Day to day, double-click **Volunteer Scheduler.command** in the data folder and follow the numbered menu. Everything below is for whoever sets up or maintains the tool.
 
 **Two folders:**
 - **Code:** this repo, at `~/code/volunteer-scheduler`. It's not synced; GitHub is its backup.
