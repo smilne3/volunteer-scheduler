@@ -7,8 +7,8 @@ This is for the volunteer coordinator who runs the schedule each week. You don't
 **What it never does:** it never emails, texts or invites anyone. Telling volunteers their shifts is always up to you.
 
 **What you need:**
-- The Mac where the scheduler is set up.
-- The **scheduler folder** on that Mac, named `volunteer-scheduler`. It's in iCloud Drive.
+- A Mac that can see the **scheduler folder**, named `volunteer-scheduler`, in iCloud Drive. It can be your own folder or one someone has shared with you.
+- The first time on each Mac, a one-off setup. See [First time on a Mac](#first-time-on-a-mac).
 - Access to the Google Sheet that collects the sign-up form's responses.
 - Access to the shared volunteer-shifts calendar in Google Calendar.
 
@@ -17,6 +17,7 @@ This is for the volunteer coordinator who runs the schedule each week. You don't
 - [Weekly review](#weekly-review)
 - [When the sign-up form changes](#when-the-sign-up-form-changes)
 - [Other changes](#other-changes)
+- [Sharing the scheduler with another coordinator](#sharing-the-scheduler-with-another-coordinator)
 - [When something goes wrong](#when-something-goes-wrong)
 - [Keeping volunteers' details private](#keeping-volunteers-details-private)
 
@@ -30,6 +31,7 @@ Everything you work with is in this one folder.
 |---|---|
 | **Volunteer Scheduler.command** | Double-click to start. It opens a menu with every step below. |
 | **Draft next week.command** | A shortcut that drafts next week in one double-click. |
+| **Set up this Mac.command** | Run once on each Mac before using the scheduler there, and again to update it. |
 | **How to use the scheduler.html** | A short version of this runbook. |
 | **signups.xlsx** | The sign-up spreadsheet. You replace it each week. |
 | **availability_review.csv** | Where you confirm availability that people typed instead of ticking boxes. |
@@ -40,6 +42,18 @@ Each week's folder holds:
 - **review.html:** the one-page review. Open it in any browser, and print it if you like.
 - **assignments.csv:** who's on each shift, as a spreadsheet you can edit.
 - **calendar.ics:** the file for Google Calendar. It only appears once you approve the week.
+
+### First time on a Mac
+
+Do this once on each Mac you'll use, including a Mac someone shared the folder with. It needs an internet connection and takes a few minutes.
+
+1. Double-click **Set up this Mac.command** in the scheduler folder.
+2. If a window asks to install Apple's **command line developer tools**, click **Install** and wait for it to finish. Then double-click **Set up this Mac.command** again.
+3. When the window says **All set**, press **Return** to close it.
+
+The scheduler itself is installed in your home folder, not in iCloud, so each Mac has its own copy. The scheduler folder, with the sign-ups and schedules, stays shared. To get updates later, double-click **Set up this Mac.command** again.
+
+If you double-click **Volunteer Scheduler.command** on a Mac that isn't set up, it says "The scheduler isn't set up on this Mac yet". Nothing is changed.
 
 ---
 
@@ -332,6 +346,21 @@ If the scheduler reports a problem in settings.json after you edit it, the messa
 
 ---
 
+## Sharing the scheduler with another coordinator
+
+The scheduler is the shared folder, plus a one-off setup on each Mac.
+
+1. In Finder, open **iCloud Drive**, right-click the **volunteer-scheduler** folder, and choose **Share**.
+2. Choose to share the folder, add the other person, and give them permission to **make changes**.
+3. When they accept, the folder appears in their iCloud Drive. They double-click **Set up this Mac.command** once (see [First time on a Mac](#first-time-on-a-mac)), then use the scheduler exactly as this runbook describes.
+
+Some tips for working together:
+- **One person works on a week at a time.** If two people edit the same file at once, iCloud keeps both versions, and one gets " 2" added to its name. Open both, keep the right one, and delete the other.
+- **Anyone you share the folder with can see volunteers' details.** Share it only with people who need them.
+- **Settings are shared too.** A closed date or a change to the Shifts tab applies for everyone.
+
+---
+
 ## When something goes wrong
 
 | You see | What to do |
@@ -345,12 +374,13 @@ If the scheduler reports a problem in settings.json after you edit it, the messa
 | "…is already approved" | To change it, see [If plans change after approving](#if-plans-change-after-approving). |
 | A volunteer who signed up isn't on any shift | Check the review page. They may need their typed availability confirmed (step 3), have a sign-up problem, have hit their limit, or be waiting their turn. The Fairness section shows when they last worked. |
 | macOS says the .command file can't be opened | Right-click it, choose **Open**, then **Open** again. |
-| The window says "Can't find the scheduler's code" | The scheduler isn't installed where the launcher expects. Ask the person who set it up. |
+| "The scheduler isn't set up on this Mac yet" | Double-click **Set up this Mac.command** once. See [First time on a Mac](#first-time-on-a-mac). |
+| Setup says "The download didn't work" or "Installing didn't work" | Check the internet connection, then double-click **Set up this Mac.command** again. |
 
 ---
 
 ## Keeping volunteers' details private
 
-- **Personal details stay on this Mac:** `signups.xlsx`, `availability_review.csv` and every week's review page contain volunteers' names, phone numbers and emails. Don't post them or forward them to people who don't need them.
+- **Personal details stay in the scheduler folder:** `signups.xlsx`, `availability_review.csv` and every week's review page contain volunteers' names, phone numbers and emails. Share the folder only with people who need them, and don't post or forward these files.
 - **The calendar file has names only:** **calendar.ics** has no phone numbers or emails, and importing it sends no invitations.
 - **Nothing is sent from here:** the scheduler doesn't contact anyone or upload anything.

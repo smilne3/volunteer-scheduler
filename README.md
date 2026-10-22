@@ -105,12 +105,13 @@ cp ~/code/volunteer-scheduler/settings.example.json ~/volunteer-scheduler/settin
 cd ~/code/volunteer-scheduler && python -m scheduler install-launchers
 ```
 
-`install-launchers` writes three files into the data folder, set up for this laptop:
+`install-launchers` writes four files into the data folder:
 - **Volunteer Scheduler.command:** double-click for the menu.
 - **Draft next week.command:** double-click to draft next week in one step.
+- **Set up this Mac.command:** installs or updates the scheduler on any Mac (clones this repo to `~/code/volunteer-scheduler`, creates `~/.venvs/volunteer-scheduler`, installs `requirements.txt`). On a Mac without Apple's command line tools, it prompts to install them first.
 - **How to use the scheduler.html:** the coordinator's guide.
 
-Run it again if the code or the environment moves. It never overwrites files it didn't make. The first time you double-click a `.command` file, macOS may ask you to confirm: right-click it, choose **Open**, then **Open** again.
+The scripts contain no usernames or paths. Each uses the folder it sits in as the data folder, and the home folder of whichever Mac runs it for the code. So the data folder can be shared through iCloud with other coordinators: each of them double-clicks **Set up this Mac.command** once. Reinstalling from any Mac writes identical files. It never overwrites files it didn't make. The first time you double-click a `.command` file, macOS may ask you to confirm: right-click it, choose **Open**, then **Open** again.
 
 Each session:
 

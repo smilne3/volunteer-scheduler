@@ -87,8 +87,8 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser(
         "install-launchers",
         help="Put double-click launchers and the how-to guide in the data folder",
-        description='Write "Volunteer Scheduler.command", "Draft next week.command" and "How to use the '
-                    'scheduler.html" into the data folder, set up for this laptop. Safe to run again.',
+        description='Write "Volunteer Scheduler.command", "Draft next week.command", "Set up this Mac.command" '
+                    'and "How to use the scheduler.html" into the data folder. They work on any Mac. Safe to run again.',
     )
     return parser
 
@@ -117,11 +117,11 @@ def main(argv=None) -> int:
             return run_menu(data_folder(), today, opener=(lambda *a, **k: None) if quiet else open_in_finder,
                             open_pages=not quiet)
         if args.command == "install-launchers":
-            from .launchers import install_launchers
-            code_dir = Path(__file__).resolve().parent.parent
-            for path in install_launchers(data_folder(), code_dir, Path(sys.executable)):
+            from .launchers import SETUP_NAME, install_launchers
+            for path in install_launchers(data_folder()):
                 print(f"Wrote {path}")
-            print("Double-click \"Volunteer Scheduler.command\" in that folder to start.")
+            print(f'On any other Mac that can see this folder, double-click "{SETUP_NAME}" once.')
+            print('Then double-click "Volunteer Scheduler.command" to start.')
             return 0
     except InputError as e:
         print(f"Error: {e}", file=sys.stderr)
