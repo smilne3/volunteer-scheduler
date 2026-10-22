@@ -1,5 +1,6 @@
 """Phase 1: the `check-input` command."""
 
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -13,14 +14,19 @@ def run(*args):
                           cwd=PROJECT, capture_output=True, text=True)
 
 
-def test_check_input_on_fake_data():
-    result = run("check-input", "--file", str(FIXTURE))
+def test_check_input_on_fake_data(tmp_path):
+    # Work on a copy: check-input writes availability_review.csv next to the file.
+    signups = tmp_path / "signups.xlsx"
+    shutil.copy(FIXTURE, signups)
+    result = run("check-input", "--file", str(signups))
     assert result.returncode == 0, result.stderr
     out = result.stdout
     assert "30 responses from 30 volunteers" in out
     assert "SUMMARY: 19 ready, 11 need reading, 0 with problems" in out
     assert 'Bailey Sample: "Saturdays but not the 14th"' in out
     assert "THU-1500  needs 2: 6 available (3 experienced)" in out
+    assert "suggested: SAT-0900, SAT-1200 except 2026-11-14" in out
+    assert (tmp_path / "availability_review.csv").exists()
 
 
 def test_check_input_error_is_plain_english(tmp_path):
