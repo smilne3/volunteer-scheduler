@@ -175,6 +175,13 @@ Each phase ends with something you can run and check. Don't start the next phase
 4. **Contact list** for scheduled people only, so the coordinator can tell them.
 
 **Done when:** the page fits on one printed page for the fake data, all four sections show, and a draft with an empty slot shows it in red at the top.
+**Result (2026-10-22):** done. Details settled while building:
+- **Verified on paper, not by eye.** A test prints the page to PDF with headless Chrome and counts pages. It checks the fake week and a heavier week (a short shift, a sign-up problem, a duplicate response, 18 people scheduled). Both fit on one US Letter page. The test is skipped on machines without Chrome.
+- **Escaping.** Everything from the form (names, phones, answers) is HTML-escaped, so a name containing HTML can't break the page or run code.
+- **Hand edits are protected.** If a week's `assignments.csv` differs from a fresh draft, drafting again stops and asks for `--replace`, which keeps the old file as `assignments-before-<time>.csv`. An approved week (Phase 6's `APPROVED` marker) is never redrafted.
+- **`assignments.csv` has a blank row for each open spot,** so filling a gap by hand is just typing a name and email.
+- **Gap reasons are grouped** ("Answers not confirmed yet that may include it: Harper Demo, Morgan Pretend, Xan Exampleton") instead of one sentence per person.
+- **Works on screen too:** light and dark mode, narrow screens. The banner stays dark red with white text in both modes.
 
 ### Phase 6: Edit, re-check, approve, calendar file
 **Builds:**
