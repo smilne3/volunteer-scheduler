@@ -1,0 +1,9 @@
+{
+  "timezone": "America/New_York",
+  "closed_dates": [],
+  "extra_experienced_emails": [],
+  "fair_counts_before_preferences": true,
+  "allow_back_to_back_shifts": true,
+  "fairness_lookback_weeks": 4,
+  "count_approved_shifts_as_experience": false
+}
