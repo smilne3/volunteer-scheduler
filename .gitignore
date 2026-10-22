@@ -1,5 +1,6 @@
 # Real sign-up data has volunteers' contact details. Keep it out of git.
 /signups.xlsx
+/settings.json
 /availability_review.csv
 /weeks/
 
