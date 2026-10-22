@@ -197,6 +197,55 @@ def test_setup_updates_an_existing_install(folder, tmp_path):
     assert "Updating the scheduler" in result.stdout and "All set" in result.stdout
 
 
+def _git(*args, cwd):
+    return subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True).stdout.strip()
+
+
+def _rewritten_remote_and_clone(tmp_path):
+    """A copy of GitHub, an install cloned from it, then GitHub's history rewritten (new commit IDs)."""
+    remote = tmp_path / "github.git"
+    subprocess.run(["git", "clone", "-q", "--bare", str(PROJECT), str(remote)], check=True, capture_output=True)
+    code = tmp_path / "home" / "code" / "volunteer-scheduler"
+    subprocess.run(["git", "clone", "-q", "-b", "main", str(remote), str(code)], check=True, capture_output=True)
+    work = tmp_path / "rewrite"
+    subprocess.run(["git", "clone", "-q", "-b", "main", str(remote), str(work)], check=True, capture_output=True)
+    _git("-c", "user.name=Someone", "-c", "user.email=someone@example.com",
+         "commit", "-q", "--amend", "--no-edit", "--reset-author", cwd=work)
+    _git("push", "-q", "--force", "origin", "HEAD:main", cwd=work)
+    return code, _git("rev-parse", "HEAD", cwd=work)
+
+
+def _run_setup(folder, tmp_path, code):
+    return subprocess.run(["bash", str(folder / "Set up this Mac.command")], input="\n", cwd="/",
+                          capture_output=True, text=True, timeout=300,
+                          env=as_mac(tmp_path / "home", {"VOLUNTEER_SCHEDULER_CODE": str(code),
+                                                         "VOLUNTEER_SCHEDULER_VENV": str(VENV)}))
+
+
+def test_setup_updates_after_github_history_is_rewritten(folder, tmp_path):
+    code, new_head = _rewritten_remote_and_clone(tmp_path)
+    old_head = _git("rev-parse", "HEAD", cwd=code)
+    install_launchers(folder)
+    result = _run_setup(folder, tmp_path, code)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "old version is kept on a backup branch" in result.stdout
+    assert _git("rev-parse", "HEAD", cwd=code) == new_head
+    backups = _git("branch", "--list", "backup-*", "--format=%(objectname)", cwd=code).split()
+    assert backups == [old_head]
+
+
+def test_setup_keeps_unsaved_edits_when_history_is_rewritten(folder, tmp_path):
+    code, new_head = _rewritten_remote_and_clone(tmp_path)
+    old_head = _git("rev-parse", "HEAD", cwd=code)
+    with open(code / "README.md", "a") as f:
+        f.write("an unsaved edit\n")
+    install_launchers(folder)
+    result = _run_setup(folder, tmp_path, code)
+    assert "Couldn't update, so the version already here is kept" in result.stdout
+    assert _git("rev-parse", "HEAD", cwd=code) == old_head
+    assert "an unsaved edit" in (code / "README.md").read_text()
+
+
 def test_setup_refuses_to_install_into_icloud(folder, tmp_path):
     home = tmp_path / "home"
     install_launchers(folder)
