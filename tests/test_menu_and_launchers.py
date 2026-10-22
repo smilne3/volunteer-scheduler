@@ -111,61 +111,100 @@ def test_week_answers(text, expected):
     assert parse_week_answer(text, date(2026, 10, 26), TODAY) == expected
 
 
-# --- launchers and guide -----------------------------------------------------------
+# --- launchers, setup script and guide -------------------------------------------------
 
-def test_install_writes_executable_launchers_and_the_guide(folder):
-    written = install_launchers(folder, PROJECT, Path(sys.executable))
-    names = sorted(p.name for p in written)
-    assert names == ["Draft next week.command", GUIDE_NAME, "Volunteer Scheduler.command"]
-    for name in ("Volunteer Scheduler.command", "Draft next week.command"):
+VENV = Path(sys.executable).parent.parent          # the environment running these tests
+SCRIPTS = ["Volunteer Scheduler.command", "Draft next week.command", "Set up this Mac.command"]
+
+
+def as_mac(home, extra=None):
+    """Environment for running a launcher as if on a Mac whose home folder is `home`."""
+    env = {"HOME": str(home), "PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "PYTHONDONTWRITEBYTECODE": "1",
+           "VOLUNTEER_SCHEDULER_NO_OPEN": "1"}
+    env.update(extra or {})
+    return env
+
+
+def installed_here():
+    """Point the launcher at this checkout and this environment, as setup would."""
+    return {"VOLUNTEER_SCHEDULER_CODE": str(PROJECT), "VOLUNTEER_SCHEDULER_VENV": str(VENV)}
+
+
+def test_install_writes_the_scripts_and_the_guide(folder):
+    written = install_launchers(folder)
+    assert sorted(p.name for p in written) == sorted(SCRIPTS + [GUIDE_NAME])
+    for name in SCRIPTS:
         path = folder / name
         assert os.access(path, os.X_OK)
-        text = path.read_text()
-        assert text.startswith("#!/bin/bash\n")
-        assert f"export VOLUNTEER_SCHEDULER_DATA={folder}" in text
+        assert path.read_text().startswith("#!/bin/bash\n")
     assert "-m scheduler menu" in (folder / "Volunteer Scheduler.command").read_text()
     assert "-m scheduler draft" in (folder / "Draft next week.command").read_text()
-    install_launchers(folder, PROJECT, Path(sys.executable))                    # safe to run again
+    assert "git clone" in (folder / "Set up this Mac.command").read_text()
+
+
+def test_scripts_are_the_same_on_every_mac(folder, tmp_path):
+    """No usernames or paths, so a shared folder works for everyone and reinstalling never breaks a Mac."""
+    install_launchers(folder)
+    first = {name: (folder / name).read_bytes() for name in SCRIPTS}
+    for content in first.values():
+        assert b"/Users/" not in content and str(Path.home()).encode() not in content
+    install_launchers(folder)
+    assert {name: (folder / name).read_bytes() for name in SCRIPTS} == first
 
 
 def test_install_never_overwrites_someone_elses_file(folder):
-    (folder / "Volunteer Scheduler.command").write_text("#!/bin/bash\necho mine\n")
+    (folder / "Set up this Mac.command").write_text("#!/bin/bash\necho mine\n")
     with pytest.raises(InputError) as e:
-        install_launchers(folder, PROJECT, Path(sys.executable))
+        install_launchers(folder)
     assert "wasn't made by this tool" in str(e.value)
-    assert (folder / "Volunteer Scheduler.command").read_text() == "#!/bin/bash\necho mine\n"
+    assert (folder / "Set up this Mac.command").read_text() == "#!/bin/bash\necho mine\n"
+    assert not (folder / "Volunteer Scheduler.command").exists()      # nothing half-written
 
 
 def test_install_needs_the_data_folder(tmp_path):
     with pytest.raises(InputError):
-        install_launchers(tmp_path / "missing", PROJECT, Path(sys.executable))
+        install_launchers(tmp_path / "missing")
 
 
-def test_paths_with_spaces_and_quotes_are_safe(tmp_path):
-    odd = tmp_path / "Volunteer's Data"
+def test_a_mac_without_the_scheduler_is_told_to_run_setup(folder, tmp_path):
+    install_launchers(folder)
+    result = subprocess.run(["bash", str(folder / "Volunteer Scheduler.command")], input="\n",
+                            capture_output=True, text=True, env=as_mac(tmp_path / "other-mac"), timeout=30)
+    assert result.returncode == 1
+    assert "isn't set up on this Mac yet" in result.stdout and "Set up this Mac.command" in result.stdout
+
+
+def test_the_launcher_uses_the_folder_it_is_in(tmp_path):
+    odd = tmp_path / "Volunteer's Shared Folder"
     odd.mkdir()
     shutil.copy(FIXTURE, odd / "signups.xlsx")
-    install_launchers(odd, PROJECT, Path(sys.executable))
-    result = subprocess.run(["bash", str(odd / "Volunteer Scheduler.command")], input="q\n\n",
-                            capture_output=True, text=True, env={**os.environ, "VOLUNTEER_SCHEDULER_NO_OPEN": "1"},
-                            timeout=120)
-    assert "Volunteer Scheduler   (data folder:" in result.stdout and str(odd) in result.stdout
+    install_launchers(odd)
+    subprocess.run(["bash", str(odd / "Volunteer Scheduler.command")], input="2\n11/9\nq\n", cwd="/",
+                   capture_output=True, text=True, env=as_mac(tmp_path / "home", installed_here()), timeout=180)
+    assert (odd / "weeks" / "2026-11-09" / "review.html").exists()
 
 
-def test_the_launcher_runs_a_week(folder):
-    install_launchers(folder, PROJECT, Path(sys.executable))
-    env = {**os.environ, "VOLUNTEER_SCHEDULER_NO_OPEN": "1", "PYTHONDONTWRITEBYTECODE": "1"}
-    env.pop("VOLUNTEER_SCHEDULER_DATA", None)                 # the launcher sets it itself
-    subprocess.run(["bash", str(folder / "Volunteer Scheduler.command")], input="2\n11/9\nq\n",
-                   capture_output=True, text=True, env=env, timeout=180, cwd="/")
-    assert (folder / "weeks" / "2026-11-09" / "review.html").exists()
+def test_setup_updates_an_existing_install(folder, tmp_path):
+    """Run the setup script against a local copy of this repo and this environment (no downloads)."""
+    code = tmp_path / "home" / "code" / "volunteer-scheduler"
+    subprocess.run(["git", "clone", "-q", str(PROJECT), str(code)], check=True, capture_output=True)
+    install_launchers(folder)
+    result = subprocess.run(["bash", str(folder / "Set up this Mac.command")], input="\n", cwd="/",
+                            capture_output=True, text=True, timeout=300,
+                            env=as_mac(tmp_path / "home", {"VOLUNTEER_SCHEDULER_CODE": str(code),
+                                                           "VOLUNTEER_SCHEDULER_VENV": str(VENV)}))
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Updating the scheduler" in result.stdout and "All set" in result.stdout
 
 
-def test_launcher_explains_a_missing_install(folder):
-    install_launchers(folder, folder / "not-installed-here", Path(sys.executable))
-    result = subprocess.run(["bash", str(folder / "Volunteer Scheduler.command")], input="\n",
-                            capture_output=True, text=True, timeout=30)
-    assert "Can't find the scheduler's code" in result.stdout and result.returncode == 1
+def test_setup_refuses_to_install_into_icloud(folder, tmp_path):
+    home = tmp_path / "home"
+    install_launchers(folder)
+    icloud = home / "Library" / "Mobile Documents" / "com~apple~CloudDocs" / "code"
+    result = subprocess.run(["bash", str(folder / "Set up this Mac.command")], input="\n", cwd="/",
+                            capture_output=True, text=True, timeout=30,
+                            env=as_mac(home, {"VOLUNTEER_SCHEDULER_CODE": str(icloud)}))
+    assert result.returncode == 1 and "can't be installed inside iCloud Drive" in result.stdout
 
 
 def test_guide_matches_the_menu():
