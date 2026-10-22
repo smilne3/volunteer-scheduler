@@ -147,6 +147,13 @@ Each phase ends with something you can run and check. Don't start the next phase
 - A closed date has no shifts.
 - The checker catches each type of broken rule when given a deliberately bad assignment list.
 
+**Result (2026-10-22):** done. The fake week of Nov 9 is fully staffed with experienced cover everywhere and no rules broken. Riley still gets 3 shifts while 8 ready people get none, which is expected until Phase 4 adds fair counts. Details settled while building:
+- **Settings are loaded and validated.** Unknown keys (typos), bad dates, a bad timezone and quoted true/false are all explained. If `settings.json` is missing, defaults are used and the report says so.
+- **`allow_back_to_back_shifts` is a hard rule.** When it's off, the checker treats touching shifts on the same day (9–12 and 12–3) like overlapping ones.
+- **The checker shares no rule code with the solver,** so a solver bug can't slip past it. It also catches problems that can only come from hand edits (Phase 6): unknown person or shift, wrong week, wrong weekday, duplicate rows.
+- **A tie-break seeded by the week's date is already in place,** so drafts are repeatable now. Phase 4 adds fairness and preferences before it.
+- **Extra tests beyond the plan:** 40 random scenarios where solver output must pass the checker, and 12 tiny random cases where the solver must match a brute-force search of every possible schedule.
+
 ### Phase 4: Preferences and fairness within a week
 **Builds:** goals 3 to 5, plus a plain-English **reason** for every gap. For example: "TUE-1500 is 1 short: 3 people are available. Casey is at their weekly limit, and Harper's answer isn't confirmed yet."
 **Done when:**
