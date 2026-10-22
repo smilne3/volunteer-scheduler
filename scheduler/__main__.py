@@ -19,7 +19,7 @@ def build_parser() -> argparse.ArgumentParser:
             "person to review. Never contacts anyone."
         ),
         epilog=(
-            "Commands still to come: draft (Phases 3-5), approve (Phase 6). "
+            "Commands still to come: approve (Phase 6). "
             "See docs/BUILD_PLAN.md."
         ),
     )
@@ -36,6 +36,15 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     check.add_argument("--file", type=Path, default=DEFAULT_SIGNUPS,
+                       help="sign-up spreadsheet to read (default: signups.xlsx in the project folder)")
+
+    draft = commands.add_parser(
+        "draft",
+        help="Draft a week's schedule",
+        description="Draft a week's schedule and check it against every rule. Contacts no one.",
+    )
+    draft.add_argument("--week", help="Monday of the week to draft, like 2026-11-09 (default: next week)")
+    draft.add_argument("--file", type=Path, default=DEFAULT_SIGNUPS,
                        help="sign-up spreadsheet to read (default: signups.xlsx in the project folder)")
     return parser
 
@@ -56,6 +65,25 @@ def main(argv=None) -> int:
             data = read_signups(args.file)
             review = apply_reviews(data, today=date.today())
             print(format_report(data, review))
+        elif args.command == "draft":
+            from datetime import date
+
+            from .checker import BROKEN, check
+            from .draft_report import format_draft
+            from .review_file import apply_reviews
+            from .settings import load_settings
+            from .signups import read_signups
+            from .solver import schedule
+            from .week import parse_week
+            week = parse_week(args.week, date.today())
+            settings = load_settings(args.file.parent)
+            data = read_signups(args.file)
+            apply_reviews(data, today=date.today())
+            result = schedule(data, settings, week)
+            findings = check(data, settings, week, result.assignments)
+            print(format_draft(data, settings, result, findings))
+            if any(f.level == BROKEN for f in findings):
+                return 2
     except InputError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
