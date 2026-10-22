@@ -11,6 +11,7 @@ from html import escape
 from pathlib import Path
 from typing import List, Optional
 
+from .approval import APPROVED, CHANGED, DRAFT, Approval
 from .checker import BROKEN, Finding
 from .errors import InputError
 from .reasons import Gap
@@ -48,6 +49,7 @@ CSS = """
 * { box-sizing: border-box; }
 body { margin: 0 auto; max-width: 920px; padding: 24px 16px; background: var(--bg); color: var(--ink);
        font: 13px/1.45 -apple-system, "Helvetica Neue", Arial, sans-serif; }
+.banner.approved { background: #1e6b35; }
 .banner { background: #b3261e; color: #fff; font-weight: 700; font-size: 17px; letter-spacing: .04em;
           padding: 8px 12px; border-radius: 6px; }
 h1 { font-size: 20px; margin: 12px 0 2px; }
@@ -93,8 +95,19 @@ footer { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 6px; 
 
 
 def render_review_page(data: SignupData, settings: Settings, draft: Draft, findings: List[Finding],
-                       gaps: List[Gap], review: Optional[ReviewResult], generated: datetime) -> str:
+                       gaps: List[Gap], review: Optional[ReviewResult], generated: datetime,
+                       approval: Approval = Approval(DRAFT), edited: bool = False) -> str:
     e = escape
+    week = draft.week_start.isoformat()
+    if approval.status == APPROVED:
+        at = approval.approved_at
+        banner = ('<div class="banner approved">APPROVED '
+                  f'{at:%b} {at.day} at {at:%-I:%M %p}. calendar.ics is ready to import.</div>')
+    elif approval.status == CHANGED:
+        banner = ('<div class="banner">CHANGED SINCE APPROVAL. calendar.ics is out of date: '
+                  'approve again before sharing.</div>')
+    else:
+        banner = '<div class="banner">DRAFT, NOT APPROVED. Don\'t share this schedule yet.</div>'
     people = {v.email: v for v in data.volunteers}
     counts = Counter(a.email for a in draft.assignments)
 
@@ -186,9 +199,9 @@ def render_review_page(data: SignupData, settings: Settings, draft: Draft, findi
 <style>{CSS}</style>
 </head>
 <body>
-<div class="banner">DRAFT, NOT APPROVED. Don't share this schedule yet.</div>
+{banner}
 <h1>Volunteer schedule: week of {week_label}</h1>
-<p class="meta">Drafted {generated:%b} {generated.day}, {generated:%Y at %-I:%M %p} from {e(data.path.name)}. Nothing has been sent to anyone.</p>
+<p class="meta">{"Checked" if edited else "Drafted"} {generated:%b} {generated.day}, {generated:%Y at %-I:%M %p} from {e(data.path.name)}{" and your edited assignments.csv" if edited else ""}. Nothing has been sent to anyone.</p>
 
 <h2>1. Needs your attention</h2>
 <ul class="items">
@@ -215,7 +228,9 @@ def render_review_page(data: SignupData, settings: Settings, draft: Draft, findi
 </tbody>
 </table>
 
-<footer>To change who's on a shift, edit assignments.csv in this folder. Re-checking edits and approving the week aren't built yet.</footer>
+<footer>To change who's on a shift, edit assignments.csv in this folder, then run
+<code>python -m scheduler draft --week {week} --recheck</code>. When it looks right, run
+<code>python -m scheduler approve --week {week}</code>.</footer>
 </body>
 </html>
 """
@@ -242,7 +257,10 @@ def write_week_files(base: Path, draft: Draft, html: str, assignments_csv: bytes
     folder = Path(base) / WEEKS_DIR / draft.week_start.isoformat()
     folder.mkdir(parents=True, exist_ok=True)
     if (folder / "APPROVED").exists():
-        raise InputError(f"The week of {draft.week_start.isoformat()} is already approved, so it wasn't redrafted.")
+        raise InputError(
+            f"The week of {draft.week_start.isoformat()} is already approved, so it wasn't redrafted. To change it, "
+            f"edit its assignments.csv, run draft --week {draft.week_start.isoformat()} --recheck, then approve again."
+        )
     target = folder / "assignments.csv"
     if target.exists() and target.read_bytes() != assignments_csv:
         if not replace:

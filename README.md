@@ -2,39 +2,60 @@
 
 Drafts a weekly volunteer shift calendar from `signups.xlsx` for a person to review and approve. It never emails, texts or contacts anyone. Plan and decisions: [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md).
 
-**Status:** Phases 0–5 done. The tool reads `signups.xlsx`, uses confirmed free-text readings, drafts a week that keeps every rule, spreads shifts fairly, honors preferences, explains any gap, and produces a one-page review page. Approving the week and the calendar file come in Phase 6.
+**Status:** Phases 0–6 done. The full weekly routine works: check the sign-ups, draft, review, edit, approve, and import into Google Calendar. Still to come: fairness across weeks (Phase 7) and a double-click launcher for the coordinator (Phase 8).
 
-## Draft a week
+## Each week
 
+Run these in the project folder after activating the environment (see [Setup](#setup-once-per-laptop)).
+
+**1. Check the sign-ups.**
+```
+python -m scheduler check-input
+```
+This shows what the tool understood from `signups.xlsx`. If anyone typed their availability instead of ticking boxes, confirm it first (see [Confirm free-text availability](#confirm-free-text-availability)). Until it's confirmed, they won't be scheduled.
+
+**2. Draft the week.**
 ```
 python -m scheduler draft                     # next week
 python -m scheduler draft --week 2026-11-09   # the week starting Monday Nov 9
 ```
+This writes `weeks/<Monday>/review.html` and opens it in your browser, and writes `weeks/<Monday>/assignments.csv`. The review page is marked **DRAFT, NOT APPROVED**, prints on one sheet, and has four sections: what needs your attention (short shifts in red, with reasons), the week (★ experienced, ♥ a shift they preferred), fairness, and a contact list for scheduled people only.
 
-This checks every rule (nobody outside their availability or over their weekly limit, no overlapping shifts, no shift overfilled, nothing on closed dates), then writes two files to `weeks/<Monday>/` and opens the first in your browser:
+**3. Change anything you want to.** Edit `assignments.csv` (one row per person per shift, plus a blank row for each open spot), then re-check it:
+```
+python -m scheduler draft --week 2026-11-09 --recheck
+```
+This checks your edits against every rule and refreshes the review page. You can type a volunteer's name without their email if the name matches one person.
 
-- **`review.html`**: the one-page review page. It shows what needs your attention, the week (★ experienced, ♥ a shift they preferred, open spots in red), fairness, and a contact list for scheduled people only. It's marked DRAFT, NOT APPROVED, and prints on one sheet.
-- **`assignments.csv`**: the same draft as a spreadsheet you can edit, with one row per person per shift and a blank row for each open spot.
+**4. Approve.**
+```
+python -m scheduler approve --week 2026-11-09
+```
+If any rule is broken, approval is refused and the problem is listed. If a shift is short or missing an experienced person, you'll be asked to type `yes` to approve anyway. Approving writes `weeks/<Monday>/calendar.ics` and turns the review page's banner green.
 
-Nothing is sent to anyone. Use `--no-open` to skip opening the browser. If you've edited a week's `assignments.csv`, drafting that week again won't overwrite it unless you add `--replace`, and even then the old file is kept as `assignments-before-<time>.csv`.
+**5. Import into Google Calendar** (on a computer):
+1. Open Google Calendar, click the gear, then **Settings**.
+2. Choose **Import & export**, then **Import**.
+3. Select `calendar.ics`, choose your **volunteer-shifts calendar** (not your personal one), and click **Import**.
 
-**How it chooses**, in this order:
+Each shift is one event, like "Food Pantry (AM): Alex, Indy, Uma", with full names in the description. The file has no guest list or email addresses, so importing it can't send invitations.
+
+If you already imported a week and then changed it, delete that week's shift events in Google Calendar first, then import the new file, so nothing is duplicated.
+
+**6. Tell volunteers yourself.** The tool never contacts anyone. The contact list on the review page has the phone numbers and emails you need.
+
+**If you change a week after approving it,** the review page shows **CHANGED SINCE APPROVAL**. Run `draft --recheck` and `approve` again for a new `calendar.ics`.
+
+## How it chooses
+
+In this order:
 1. Every shift that needs an experienced person gets one.
 2. As many slots as possible are filled.
 3. **Fair counts:** nobody gets a second shift while someone available has none.
 4. **Preferences:** people get shifts they marked as preferred whenever possible. Set `fair_counts_before_preferences` to `false` to swap steps 3 and 4.
 5. Remaining ties are broken in a fixed order that changes each week, so the same week always drafts the same way.
 
-If a shift is short or has no experienced person, the draft says why, for example: "THU-1500 (Nov 26) is 2 short: 6 people are available. Casey is at their weekly limit. Harper's answer may include it but isn't confirmed yet." The FAIRNESS lines list who has more than one shift and who was available but not scheduled.
-
-## Check the spreadsheet
-
-```
-python -m scheduler check-input                 # reads signups.xlsx in this folder
-python -m scheduler check-input --file other.xlsx
-```
-
-This shows each volunteer's shifts (✓ available, ♥ preferred), which free-text answers still need reading, problems that block someone from being scheduled (for example, a blank weekly limit), duplicate responses, and how many ready volunteers each shift has. It never changes the spreadsheet.
+These rules are never broken: nobody is scheduled outside their availability or over their weekly limit, nobody is on overlapping shifts, no shift gets more people than it needs, and nothing is scheduled on closed dates. If a shift can't be fully staffed, it's left short and the review page says why. For example: "THU-1500 (Nov 26) is 2 short: 6 people are available. Answers not confirmed yet that may include it: Harper Demo, Morgan Pretend."
 
 ## Confirm free-text availability
 
@@ -44,7 +65,7 @@ When someone types their availability instead of ticking boxes ("Saturdays but n
 2. Open the file. For each row, copy the suggested reading into **confirmed_reading**, or write your own. Leave it blank if you're not sure yet.
 3. Save it as CSV and run `check-input` again. The **status** column shows `confirmed`, `to review`, or an error explaining what to fix.
 
-Suggestions leave out anything uncertain ("maybe Sat", "every other week") and the notes column says why, so accepting a suggestion never adds availability the person didn't clearly give.
+Suggestions leave out anything uncertain ("maybe Sat", "every other week"), and the notes column says why. Accepting a suggestion never adds availability the person didn't clearly give.
 
 **How to write a reading:**
 
@@ -73,14 +94,14 @@ pip install -r requirements.txt
 cp settings.example.json settings.json   # then edit settings.json
 ```
 
-## Each session
+Each session:
 
 ```
 cd ~/volunteer-scheduler
 source ~/.venvs/volunteer-scheduler/bin/activate
-python -m scheduler --help
-pytest
 ```
+
+Run the tests with `pytest`. One test prints the review page to PDF with Google Chrome to check it fits on one page, and it's skipped if Chrome isn't installed.
 
 ## Settings
 
@@ -88,13 +109,13 @@ pytest
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `timezone` | `America/New_York` | Timezone the shift times are in |
+| `timezone` | `America/New_York` | Timezone the shift times are in. The calendar file uses it. |
 | `closed_dates` | `[]` | Dates with no shifts, e.g. `["2026-11-26"]` |
 | `extra_experienced_emails` | `[]` | People to count as experienced even if their form says No |
 | `fair_counts_before_preferences` | `true` | Spread shift counts fairly before honoring preferences |
 | `allow_back_to_back_shifts` | `true` | Whether one person can work both Saturday shifts |
-| `fairness_lookback_weeks` | `4` | How many past approved weeks count toward fairness |
-| `count_approved_shifts_as_experience` | `false` | Whether finishing an approved shift makes someone experienced |
+| `fairness_lookback_weeks` | `4` | How many past approved weeks count toward fairness (Phase 7) |
+| `count_approved_shifts_as_experience` | `false` | Whether finishing an approved shift makes someone experienced (Phase 7) |
 
 ## Private data stays out of git
 

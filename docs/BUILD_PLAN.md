@@ -196,6 +196,14 @@ Each phase ends with something you can run and check. Don't start the next phase
 - A test confirms the file has no `ATTENDEE`, `ORGANIZER` or `mailto:`.
 - A test scans the code and fails if it finds `smtplib`, `requests`, `urllib`, `socket` or any SMS library.
 
+**Result (2026-10-22):** done, except for one check that needs a person: importing the `.ics` into a real **test** Google Calendar. Instead, an independent iCalendar library (`icalendar` 6.3.2, used only for this one-off check and not added to the project) parsed the file with no errors, and all five events had the right local times. Details settled while building:
+- **Reading edits is forgiving but strict where it matters.** A name without an email is matched if it fits exactly one volunteer. Excel-style dates (`11/10/26`), a shift name instead of its ID, and Windows-encoded saves are all accepted. Anything that can't be read is treated as a broken rule, so approval is refused.
+- **The typed "yes" comes from the keyboard.** There's no `--yes` flag, so it can't become a habit. If there's no answer (e.g. run from a script), the week isn't approved.
+- **The `APPROVED` marker is written last,** after `calendar.ics`, so an interrupted approval never looks complete. It stores the time, a SHA-256 fingerprint of `assignments.csv`, and how many times the week has been approved.
+- **Calendar events:** the UID is stable per week and shift, and SEQUENCE counts approvals. Titles look like "Food Pantry (AM): Alex, Indy, Uma"; full names are used when first names clash, and open spots are shown as "(1 open)". Times are in UTC converted from `settings.timezone`, tested across the Nov 1 daylight-saving change. Lines are folded at 75 octets without splitting characters, with CRLF line endings.
+- **Gap reasons in hand-edited drafts** list free people as "Available and free: …", since leaving them off is the coordinator's choice.
+- **The commands moved to `scheduler/commands.py`;** `__main__.py` only parses arguments.
+
 **Import note for the coordinator:** import into a dedicated calendar, for example "Volunteer Shifts." Google Calendar may create duplicates if you import a corrected file for a week you've already imported. To fix a week, delete that week's events first, then import again.
 
 ### Phase 7: Fairness across weeks
