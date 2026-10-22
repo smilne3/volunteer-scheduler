@@ -2,7 +2,16 @@
 
 Drafts a weekly volunteer shift calendar from `signups.xlsx` for a person to review and approve. It never emails, texts or contacts anyone. Plan and decisions: [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md).
 
-**Status:** Phase 0 (setup) only. The tool doesn't schedule anything yet.
+**Status:** Phases 0–1 done. The tool reads `signups.xlsx` and reports what it understood. It doesn't schedule anything yet.
+
+## Check the spreadsheet
+
+```
+python -m scheduler check-input                 # reads signups.xlsx in this folder
+python -m scheduler check-input --file other.xlsx
+```
+
+This shows each volunteer's shifts (✓ available, ♥ preferred), which free-text answers still need reading, problems that block someone from being scheduled (for example, a blank weekly limit), duplicate responses, and how many ready volunteers each shift has. It never changes the spreadsheet.
 
 ## Setup (once per laptop)
 
