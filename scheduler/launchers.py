@@ -71,7 +71,19 @@ fi
 # 2. Get the scheduler, or update it.
 if [ -d "$CODE/.git" ]; then
   echo "Updating the scheduler..."
-  git -C "$CODE" pull --ff-only -q 2>/dev/null || echo "(Couldn't update, so the version already here is kept.)"
+  if ! git -C "$CODE" pull --ff-only -q 2>/dev/null; then
+    # This copy and GitHub's have split, usually because GitHub's history was rewritten. Switch to GitHub's, keeping the old version on a backup branch,
+    # but only if this copy is on main and has no unsaved edits.
+    if [ "$(git -C "$CODE" branch --show-current)" = main ] \\
+       && [ -z "$(git -C "$CODE" status --porcelain --untracked-files=no)" ] \\
+       && git -C "$CODE" fetch -q origin main 2>/dev/null; then
+      git -C "$CODE" branch -q -f "backup-$(date +%Y%m%d-%H%M%S)" HEAD
+      git -C "$CODE" reset -q --hard origin/main
+      echo "(Updated. The old version is kept on a backup branch.)"
+    else
+      echo "(Couldn't update, so the version already here is kept.)"
+    fi
+  fi
 elif [ -e "$CODE" ]; then
   finish "$CODE already exists but isn't the scheduler. Move it aside, then try again." 1
 else
