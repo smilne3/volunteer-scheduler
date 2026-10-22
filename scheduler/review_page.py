@@ -13,6 +13,7 @@ from typing import List, Optional
 
 from .approval import APPROVED, CHANGED, DRAFT, Approval
 from .checker import BROKEN, Finding
+from .disclosure import ai_note
 from .errors import InputError
 from .reasons import Gap
 from .review_file import CONFIRMED, ReviewResult
@@ -93,6 +94,7 @@ tr.closed td { color: var(--muted); }
 p.line { margin: 3px 0; }
 .legend, footer { color: var(--muted); font-size: 11px; }
 footer { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 6px; }
+.ai-note { color: var(--muted); font-size: 11px; font-style: italic; margin: 6px 0 0; }
 @media (max-width: 600px) { .hide-narrow { display: none; } }
 @page { size: letter; margin: 0.45in; }
 @media print {
@@ -110,6 +112,7 @@ footer { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 6px; 
   p.line { margin: 1px 0; }
   .legend, footer { font-size: 8.5px; }
   footer { margin-top: 8px; }
+  .ai-note { font-size: 8.5px; margin-top: 3px; }
   tr { break-inside: avoid; }
 }
 """
@@ -258,6 +261,7 @@ def render_review_page(data: SignupData, settings: Settings, draft: Draft, findi
 <footer>To change who's on a shift, edit assignments.csv in this folder, then run
 <code>python -m scheduler draft --week {week} --recheck</code>. When it looks right, run
 <code>python -m scheduler approve --week {week}</code>.</footer>
+<p class="ai-note">{e(ai_note(approval.status == APPROVED))}</p>
 </body>
 </html>
 """
