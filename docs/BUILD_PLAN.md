@@ -235,6 +235,12 @@ Each phase ends with something you can run and check. Don't start the next phase
 
 These have defaults so building can start now. Each one is a single setting to change later.
 
-1. **Which shifts need an experienced person?** Currently placeholders: Saturday pantry (both) and phone bank = Yes, tutoring = No.
+1. **Which shifts need an experienced person?** Currently placeholders: Saturday pantry (both) and phone bank = Yes, tutoring = No. Since 2026-10-22 the Shifts tab also accepts a number here (see section 7).
 2. **Can one person work both Saturday shifts (9 to 3) if their limit allows?** Default: yes. The fairness goal already makes it rare.
 3. **Fair counts before preferences (section 3)?** Default: yes.
+
+---
+
+## 7. Changes after the phases
+
+**2026-10-22: a shift can need more than one experienced volunteer.** The coordinator worries that people drop Saturday afternoons, so Sat PM should have a backup experienced person. The Shifts tab's "Needs at least one experienced volunteer?" column now takes Yes (1), No (0), or a number, which can't be more than "People needed". Goal 1 (experienced cover) now counts experienced people up to each shift's number, so it's still met before coverage and fairness. The checker and the gap reasons report "has 1 of the 2 experienced volunteers it needs". On the fake data, setting Sat PM to 2 gives Indy and Yael on Sat PM; everyone is still on a preferred shift and nothing is broken. **The real Google Sheet's Shifts tab must say 2 as well,** or the next downloaded `signups.xlsx` puts it back to Yes.

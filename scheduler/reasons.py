@@ -93,13 +93,18 @@ def explain_gaps(data: SignupData, settings: Settings, draft: Draft, edited: boo
             parts += _also_mentioned(slot, data, lambda v: True)
             gaps.append(Gap(slot, "short", _sentence([head] + parts)))
 
-        if slot.shift.needs_experienced and not any(
-                is_experienced(v, settings) for v in draft.candidates if v.email in team):
+        need = slot.shift.experienced_needed
+        have = sum(1 for v in data.volunteers if v.email in team and is_experienced(v, settings))
+        if have < need:
             exp_free = [v for v in free if is_experienced(v, settings)]
-            head = f"{slot.shift.id} ({_when(slot)}) has no experienced volunteer"
+            if have == 0:
+                head = f"{slot.shift.id} ({_when(slot)}) has no experienced volunteer"
+            else:
+                head = f"{slot.shift.id} ({_when(slot)}) has {have} of the {need} experienced volunteers it needs"
             if not exp_free:
-                head += ": no experienced person is available"
+                head += (": no experienced person is available" if have == 0
+                         else ": no other experienced person is available")
             parts = _reasons(exp_free, slot, draft, settings, by_id, edited)
             parts += _also_mentioned(slot, data, lambda v: is_experienced(v, settings))
-            gaps.append(Gap(slot, "no_experienced", _sentence([head] + parts)))
+            gaps.append(Gap(slot, "no_experienced" if have == 0 else "few_experienced", _sentence([head] + parts)))
     return gaps

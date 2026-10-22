@@ -38,12 +38,16 @@ class Shift:
     start: time
     end: time
     needs: int
-    needs_experienced: bool
+    experienced_needed: int   # how many experienced volunteers it needs: Yes = 1, No = 0, or a number
     row: int             # row in the Shifts sheet, for messages
 
     @property
     def weekday(self) -> int:
         return DAYS.index(self.day)
+
+    @property
+    def needs_experienced(self) -> bool:
+        return self.experienced_needed > 0
 
 
 def _to_24h(hour: int, minute: int, meridiem: str) -> Optional[time]:
@@ -118,9 +122,22 @@ def read_shifts(wb) -> List[Shift]:
             needs = int(needs.strip())
         if not isinstance(needs, int) or isinstance(needs, bool) or needs < 1:
             row_errors.append(f'People needed "{details["needs"]}" must be a whole number, 1 or more.')
-        exp = norm(details["experienced"])
-        if exp not in YES | NO:
-            row_errors.append(f'"Needs at least one experienced volunteer?" is "{details["experienced"]}"; use Yes or No.')
+        exp_raw, exp = details["experienced"], norm(details["experienced"])
+        if exp in YES:
+            experienced = 1
+        elif exp in NO:
+            experienced = 0
+        elif isinstance(exp_raw, (int, float)) and not isinstance(exp_raw, bool) and float(exp_raw).is_integer():
+            experienced = int(exp_raw)
+        elif exp.isdigit():
+            experienced = int(exp)
+        else:
+            experienced = None
+        if experienced is None or experienced < 0:
+            row_errors.append(f'"Needs at least one experienced volunteer?" is "{exp_raw}"; use Yes, No, '
+                              f'or how many experienced people it needs, like 2.')
+        elif isinstance(needs, int) and experienced > needs:
+            row_errors.append(f"it needs {experienced} experienced volunteers but only {needs} people in total.")
 
         if row_errors:
             errors.extend(f"Row {row_num} ({name}): {e}" for e in row_errors)
@@ -129,7 +146,7 @@ def read_shifts(wb) -> List[Shift]:
         shifts.append(Shift(
             id=f"{day[:3].upper()}-{start:%H%M}",
             name=name, day=day, start=start, end=end,
-            needs=needs, needs_experienced=exp in YES, row=row_num,
+            needs=needs, experienced_needed=experienced, row=row_num,
         ))
 
     seen_ids, seen_names = {}, {}

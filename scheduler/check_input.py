@@ -43,7 +43,7 @@ def format_report(data: SignupData, review: Optional[ReviewResult] = None) -> st
     add("SHIFTS")
     add(f"  {'ID':<9} {'Shift':<34} {'Needs':>5}  Experienced person?")
     for s in shifts:
-        add(f"  {s.id:<9} {_fit(s.name, 34):<34} {s.needs:>5}  {'yes' if s.needs_experienced else 'no'}")
+        add(f"  {s.id:<9} {_fit(s.name, 34):<34} {s.needs:>5}  {'no' if not s.experienced_needed else 'yes' if s.experienced_needed == 1 else s.experienced_needed}")
     add("")
 
     ids = [s.id for s in shifts]
@@ -134,7 +134,7 @@ def format_report(data: SignupData, review: Optional[ReviewResult] = None) -> st
         flag = ""
         if len(can) < s.needs:
             flag = "  <- fewer people than needed"
-        elif s.needs_experienced and exp == 0:
-            flag = "  <- no experienced person"
+        elif exp < s.experienced_needed:
+            flag = "  <- no experienced person" if exp == 0 else f"  <- fewer than {s.experienced_needed} experienced"
         add(f"  {s.id:<9} needs {s.needs}: {len(can)} available ({exp} experienced){flag}")
     return "\n".join(out)
