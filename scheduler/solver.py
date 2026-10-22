@@ -59,10 +59,23 @@ def _solve(problem: pulp.LpProblem) -> None:
         raise RuntimeError(f"Scheduler couldn't finish (solver status: {pulp.LpStatus[status]}).")
 
 
-def schedule(data: SignupData, settings: Settings, week_start: date) -> Draft:
-    slots, closed = week_slots(data.shifts, week_start, settings.closed_dates)
+def _people(data: SignupData):
     candidates = [v for v in data.volunteers if v.status == "ready" and (v.max_per_week or 0) > 0]
     left_out = [v for v in data.volunteers if v.status in ("needs reading", "problem")]
+    return candidates, left_out
+
+
+def draft_from(data: SignupData, settings: Settings, week_start: date, assignments) -> Draft:
+    """A Draft built from given assignments (e.g. a hand-edited assignments.csv)."""
+    slots, closed = week_slots(data.shifts, week_start, settings.closed_dates)
+    candidates, left_out = _people(data)
+    ordered = sorted(assignments, key=lambda a: (a.date, a.shift_id, a.email))
+    return Draft(week_start, slots, closed, ordered, candidates, left_out)
+
+
+def schedule(data: SignupData, settings: Settings, week_start: date) -> Draft:
+    slots, closed = week_slots(data.shifts, week_start, settings.closed_dates)
+    candidates, left_out = _people(data)
 
     # Choices only for pairs where the person is available that date (hard rule 1).
     pairs: List[Tuple[Volunteer, Slot]] = [

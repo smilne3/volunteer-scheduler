@@ -20,7 +20,7 @@ def _when(slot: Slot) -> str:
     return f"{slot.date:%b} {slot.date.day}"
 
 
-def _why_not(v: Volunteer, slot: Slot, draft: Draft, settings: Settings, by_id) -> str:
+def _why_not(v: Volunteer, slot: Slot, draft: Draft, settings: Settings, by_id, edited: bool = False) -> str:
     """Why an available person isn't on this slot."""
     mine = [a for a in draft.assignments if a.email == v.email]
     for a in mine:
@@ -32,6 +32,8 @@ def _why_not(v: Volunteer, slot: Slot, draft: Draft, settings: Settings, by_id) 
     if len(mine) >= (v.max_per_week or 0):
         n = v.max_per_week
         return f"{v.name} is at their weekly limit ({n} shift{'s' if n != 1 else ''})"
+    if edited:
+        return ""          # grouped by the caller into "Available and free: ..."
     return f"{v.name} could take it but wasn't used. This shouldn't happen, so please report it"
 
 
@@ -59,11 +61,22 @@ def _also_mentioned(slot: Slot, data: SignupData, wanted) -> List[str]:
     return [f"{labels[k]}: {', '.join(names)}" for k, names in groups.items() if names]
 
 
+def _reasons(free: List[Volunteer], slot: Slot, draft: Draft, settings: Settings, by_id, edited: bool) -> List[str]:
+    parts, idle = [], []
+    for v in free:
+        why = _why_not(v, slot, draft, settings, by_id, edited)
+        (parts.append(why) if why else idle.append(v.name))
+    if idle:
+        parts.append("Available and free: " + ", ".join(idle))
+    return parts
+
+
 def _sentence(parts: List[str]) -> str:
     return " ".join(p + "." for p in parts)
 
 
-def explain_gaps(data: SignupData, settings: Settings, draft: Draft) -> List[Gap]:
+def explain_gaps(data: SignupData, settings: Settings, draft: Draft, edited: bool = False) -> List[Gap]:
+    """edited=True for hand-edited drafts, where leaving someone free is the coordinator's choice."""
     by_id = {s.id: s for s in data.shifts}
     gaps = []
     for slot in draft.slots:
@@ -76,7 +89,7 @@ def explain_gaps(data: SignupData, settings: Settings, draft: Draft) -> List[Gap
             head = (f"{slot.shift.id} ({_when(slot)}) is {short} short: "
                     + ("nobody is available" if available == 0
                        else f"{available} {'person is' if available == 1 else 'people are'} available"))
-            parts = [_why_not(v, slot, draft, settings, by_id) for v in free]
+            parts = _reasons(free, slot, draft, settings, by_id, edited)
             parts += _also_mentioned(slot, data, lambda v: True)
             gaps.append(Gap(slot, "short", _sentence([head] + parts)))
 
@@ -86,7 +99,7 @@ def explain_gaps(data: SignupData, settings: Settings, draft: Draft) -> List[Gap
             head = f"{slot.shift.id} ({_when(slot)}) has no experienced volunteer"
             if not exp_free:
                 head += ": no experienced person is available"
-            parts = [_why_not(v, slot, draft, settings, by_id) for v in exp_free]
+            parts = _reasons(exp_free, slot, draft, settings, by_id, edited)
             parts += _also_mentioned(slot, data, lambda v: is_experienced(v, settings))
             gaps.append(Gap(slot, "no_experienced", _sentence([head] + parts)))
     return gaps
