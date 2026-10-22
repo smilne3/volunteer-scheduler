@@ -4,6 +4,7 @@ from collections import Counter
 from typing import List
 
 from .checker import BROKEN, UNMET, Finding
+from .disclosure import ai_note
 from .reasons import explain_gaps
 from .settings import Settings
 from .signups import SignupData
@@ -72,4 +73,6 @@ def format_draft(data: SignupData, settings: Settings, draft: Draft, findings: L
         out.append(f"{len(draft.left_out)} people weren't considered because their sign-up needs attention. "
                    f"Run check-input for details.")
     out.extend(settings.notes)
+    out.append("")
+    out.append(ai_note(approved=(status == "approved")))
     return "\n".join(out)
