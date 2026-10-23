@@ -55,8 +55,19 @@ def _tie_break(week: date, email: str, shift_id: str) -> int:
     return int(digest[:8], 16) % 1000 + 1
 
 
+def _solver():
+    """HiGHS runs natively on Intel and Apple-chip Macs. PuLP's bundled CBC is
+    Intel-only on macOS (Apple-chip Macs need Rosetta for it), so it's only the
+    fallback. gapRel=0: each stage must find the true best, or drafts could differ
+    between runs."""
+    highs = pulp.HiGHS(msg=False, gapRel=0)
+    if highs.available():
+        return highs
+    return pulp.PULP_CBC_CMD(msg=False)
+
+
 def _solve(problem: pulp.LpProblem) -> None:
-    status = problem.solve(pulp.PULP_CBC_CMD(msg=False))
+    status = problem.solve(_solver())
     if pulp.LpStatus[status] != "Optimal":
         raise RuntimeError(f"Scheduler couldn't finish (solver status: {pulp.LpStatus[status]}).")
 

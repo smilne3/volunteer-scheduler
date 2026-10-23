@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pulp
 
+from scheduler.solver import _solver
+
 PROJECT = Path(__file__).resolve().parent.parent
 
 
@@ -16,9 +18,14 @@ def test_solver_runs():
     y = problem.add_variable("y", 0, 3, cat="Integer")
     problem += x + 2 * y
     problem += x + y <= 4
-    status = problem.solve(pulp.PULP_CBC_CMD(msg=False))
+    status = problem.solve(_solver())
     assert pulp.LpStatus[status] == "Optimal"
     assert pulp.value(problem.objective) == 7
+
+
+def test_native_solver_is_used():
+    # CBC (PuLP's bundled solver) is Intel-only on macOS; HiGHS also runs on Apple-chip Macs.
+    assert _solver().name == "HiGHS", "highspy isn't installed: run pip install -r requirements.txt"
 
 
 def test_cli_help_runs():
